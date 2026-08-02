@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+.next/
+dist/
+build/
+out/
+
+# Testing
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor/OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Prisma
+apps/api/generated/
+
+# Terraform (added later)
+*.tfstate
+*.tfstate.*
+.terraform/
