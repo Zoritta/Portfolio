@@ -71,15 +71,19 @@ project/skill/experience data to the frontend, and will host the Job Fit Analyze
 ## Local dev cheat sheet
 
 ```bash
-# from repo root: start local Postgres
-docker compose up -d postgres
+# from repo root: starts Postgres automatically, then the API
+npm run dev:api
 
-# from apps/api:
+# from apps/api, if needed directly:
 npx prisma migrate deploy   # apply migrations (non-interactive)
 npx prisma db seed          # (re)populate Project/Skill/Experience
-npm run start:dev           # start the API on :3000
 npm test                    # run unit tests
 ```
+
+`npm run dev:api` (from repo root) automatically runs `docker compose up -d postgres` first via
+npm's `predev:api` lifecycle hook (root `package.json`) — no need to remember to start the DB
+container yourself. `docker compose up -d` is idempotent, so this is safe to run even if Postgres
+is already running. You still need Docker Desktop itself open first — that part isn't automated.
 
 ## Gotchas hit on this machine (Windows)
 
