@@ -99,9 +99,13 @@ npm test                    # run unit tests
 - **`prisma init` (v7) auto-installs AI-agent "skills" folders** (`.claude/skills`,
   `.windsurf/skills`, `.agents/skills`, `skills-lock.json`) — unwanted clutter, safe to delete.
 
+10. **Unit tests** for all three modules — `*.service.spec.ts` mocks `PrismaService`, `*.controller.spec.ts`
+    mocks the service. Covers `findAll`, `findOne` (found + not-found → `NotFoundException`), and
+    that controllers correctly delegate to their service. 7 suites / 16 tests, all passing (`npm test`).
+    Mocking Prisma keeps these fast and DB-independent; real-DB-backed e2e tests come later with Playwright.
+
 ## What's next
 
-- Unit tests for `Projects`/`Skills`/`Experience` services + controllers (mocked `PrismaService`) — in progress now.
 - Connect the Next.js frontend to these endpoints.
 - Job Fit Analyzer: RAG pipeline (pgvector), OpenAI integration, `FitRequest` logging, rate limiting, prompt-injection hardening.
 - MCP server exposing this same data as agent-callable tools.
