@@ -55,6 +55,40 @@ project/skill/experience data to the frontend, and will host the Job Fit Analyze
 9. **Verified against the real dev server** (not just written) — started `npm run start:dev`,
    curled all three endpoints, confirmed real seeded data comes back and a bad ID 404s correctly
    via `NotFoundException`.
+10. **Unit tests** for all three modules — `*.service.spec.ts` mocks `PrismaService`, `*.controller.spec.ts`
+    mocks the service. Covers `findAll`, `findOne` (found + not-found → `NotFoundException`), and
+    that controllers correctly delegate to their service. 7 suites / 16 tests, all passing (`npm test`).
+    Mocking Prisma keeps these fast and DB-independent; real-DB-backed e2e tests come later with Playwright.
+11. **Connected to the Next.js frontend** — CORS enabled, port moved to `3001` to avoid colliding
+    with `next dev`. See `apps/web/PROGRESS.md` for the frontend side of this.
+12. **Job Fit Analyzer, stage 1: pgvector + embeddings.**
+    - Switched local Postgres from `postgres:16-alpine` to `pgvector/pgvector:pg16` (docker-compose.yml)
+      to get the `vector` extension. This required wiping and rebuilding the local dev volume — safe,
+      since everything is reproducible from migrations + `seed.ts`.
+    - New `Embedding` model (`prisma/schema.prisma`): `sourceType` + `sourceId` (which Project/Skill/
+      Experience row this came from), `content` (the raw text that was embedded, kept for citations
+      later), `embedding` — a `vector(1536)` column typed in Prisma as `Unsupported("vector(1536)")`,
+      since Prisma has no native vector type. All reads/writes to that column go through raw SQL.
+    - New `EmbeddingsModule`/`EmbeddingsService` (`src/embeddings/`) — wraps the OpenAI SDK
+      (`text-embedding-3-small`, 1536 dims) and upserts into `Embedding` via `$executeRaw`. The
+      OpenAI client is constructed **lazily** (only on first real use, not in the constructor) so a
+      missing `OPENAI_API_KEY` can't crash the whole app at boot — see the "lazy construction" note below.
+    - Added `@nestjs/config` (`ConfigModule.forRoot({ isGlobal: true })` in `app.module.ts`) as the
+      explicit, standard way to load `.env` — `DATABASE_URL` happened to work before this via Prisma
+      Client's own internal dotenv loading, but that's Prisma-specific behavior not worth depending
+      on for a new secret like `OPENAI_API_KEY`.
+    - `src/embeddings/generate-embeddings.script.ts` — a one-off script using
+      `NestFactory.createApplicationContext(AppModule)` (boots the same DI container as the real
+      server, minus the HTTP listener) to pull every Project/Skill/Experience row, build a text
+      representation of each, and embed+store it. Run via `npm run embed:generate`. Runs sequentially
+      (not `Promise.all`) to stay well under OpenAI rate limits — cost for ~60 short texts on
+      `text-embedding-3-small` is a fraction of a cent.
+    - `apps/api/.env.example` added, documenting required env vars (`DATABASE_URL`, `OPENAI_API_KEY`)
+      without containing real secrets.
+    - **Verified, not just run**: checked row counts by type (2 projects/53 skills/5 experiences —
+      matches the seed exactly), confirmed 1536-dimension vectors, and ran a cosine-distance sanity
+      query proving the embeddings are semantically meaningful (`React` is measurably closer to
+      `Next.js` than to `Figma`) — this is what makes retrieval in stage 2 actually work.
 
 ## Key concepts (for future-me)
 
@@ -67,6 +101,23 @@ project/skill/experience data to the frontend, and will host the Job Fit Analyze
   (interactive); `migrate deploy` only applies existing migration files (non-interactive, used in CI/prod).
 - **Upsert with a natural unique key**: `Project.title` and `Experience(company, role)` are marked
   `@unique`/`@@unique` so the seed script can be re-run safely (updates existing rows instead of duplicating).
+- **Embedding**: a vector (list of numbers) representing the *meaning* of a piece of text, produced
+  by an embedding model. Texts with similar meaning end up with vectors that are mathematically
+  close together — that's what makes semantic search possible (as opposed to keyword matching).
+- **Cosine distance** (the `<=>` operator in pgvector): a measure of how far apart two vectors are —
+  lower means more similar. This is the mechanism the Job Fit Analyzer's retrieval step will use:
+  embed the pasted job description, then find which of your Project/Skill/Experience embeddings have
+  the smallest cosine distance to it.
+- **Lazy vs. eager construction**: `EmbeddingsService`'s OpenAI client is only built the first time
+  it's actually needed (inside a method), not in the constructor. Nest constructs every provider at
+  app boot regardless of whether a request needs it — so an eager `new OpenAI(...)` in the constructor
+  would crash the *entire* app on startup if `OPENAI_API_KEY` were ever missing, even for routes that
+  have nothing to do with embeddings. Verified this directly: booted the app with no key set and
+  confirmed it started cleanly; only calling `embedText()` would fail.
+- **`NestFactory.createApplicationContext(AppModule)`**: boots the full Nest dependency-injection
+  container (all modules, all services) without starting an HTTP server — the standard way to write
+  one-off scripts/CLI tasks that need real access to app services like `PrismaService`, rather than
+  reimplementing DB connections from scratch.
 
 ## Local dev cheat sheet
 
@@ -77,6 +128,7 @@ npm run dev:api
 # from apps/api, if needed directly:
 npx prisma migrate deploy   # apply migrations (non-interactive)
 npx prisma db seed          # (re)populate Project/Skill/Experience
+npm run embed:generate      # (re)generate embeddings for all Project/Skill/Experience rows
 npm test                    # run unit tests
 ```
 
@@ -102,15 +154,22 @@ is already running. You still need Docker Desktop itself open first — that par
   the registry in-session, or just open a fresh terminal.
 - **`prisma init` (v7) auto-installs AI-agent "skills" folders** (`.claude/skills`,
   `.windsurf/skills`, `.agents/skills`, `skills-lock.json`) — unwanted clutter, safe to delete.
-
-10. **Unit tests** for all three modules — `*.service.spec.ts` mocks `PrismaService`, `*.controller.spec.ts`
-    mocks the service. Covers `findAll`, `findOne` (found + not-found → `NotFoundException`), and
-    that controllers correctly delegate to their service. 7 suites / 16 tests, all passing (`npm test`).
-    Mocking Prisma keeps these fast and DB-independent; real-DB-backed e2e tests come later with Playwright.
+- **Switching Postgres Docker images (alpine → pgvector's debian-based image) can risk index
+  corruption** if you keep the old data volume — different base images can use different text
+  collation libraries. Safe fix: `docker compose down -v` to drop the volume, then rebuild from
+  migrations + seed (both in git, so nothing real is lost). Only reasonable because this is
+  disposable local dev data, not production.
+- **A secret pasted into a file the assistant has touched in a session can end up visible in that
+  session's transcript**, even if you never paste it directly into chat — file-change tracking can
+  surface diffs. Treat any key placed in a tracked file as exposed to that session; rotate keys that
+  went through this path rather than relying on session boundaries for secrecy.
 
 ## What's next
 
-- Connect the Next.js frontend to these endpoints.
-- Job Fit Analyzer: RAG pipeline (pgvector), OpenAI integration, `FitRequest` logging, rate limiting, prompt-injection hardening.
+- Job Fit Analyzer, stage 2: a retrieval + generation endpoint — embed an incoming job description,
+  find the closest Embedding rows (cosine distance), and call the OpenAI API (via Vercel AI SDK) to
+  generate a grounded fit report with citations and a match score. Log each call to `FitRequest`.
+- Security hardening around that endpoint: zod input validation, rate limiting, prompt-injection defenses.
+- Frontend: Job Fit Analyzer UI (job-description input, streamed report).
 - MCP server exposing this same data as agent-callable tools.
 - Dockerize the API, Terraform for AWS (RDS, ECS Fargate, Secrets Manager), GitHub Actions CI/CD.
