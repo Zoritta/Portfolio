@@ -128,6 +128,11 @@ project/skill/experience data to the frontend, and will host the Job Fit Analyze
 - **Zod `.describe()`**: the strings passed to `.describe()` on schema fields aren't just documentation
   — they're sent to the model as part of the schema definition, effectively instructing it what each
   field should contain. Worth writing them carefully.
+- **Rate limiting (`@nestjs/throttler`)**: tracks request counts per client IP within a rolling time
+  window (`ttl`) and rejects requests over `limit` with `429 Too Many Requests`. Registered globally via
+  `APP_GUARD` so it applies to every route by default, then overridden per-route with `@Throttle(...)`
+  where a stricter (or looser) limit makes sense — global + per-route override, not one flat number
+  everywhere, since a free `GET` and a paid-API-backed `POST` don't carry the same abuse risk.
 
 ## Local dev cheat sheet
 
@@ -204,10 +209,32 @@ is already running. You still need Docker Desktop itself open first — that par
       passing). Deep-mocking `generateObject` itself wasn't worth it — mocking an LLM call doesn't
       prove much; the real end-to-end call above is the meaningful verification.
 
+14. **Job Fit Analyzer, stage 3: security hardening.**
+    - **Rate limiting** (`@nestjs/throttler`) — the real risk `/fit-analysis` carries: each call makes
+      two paid OpenAI requests (one embedding + one `gpt-4o-mini` generation) with no auth in front of
+      it, so an unthrottled endpoint is a direct cost-abuse target. Registered a generous app-wide
+      default (`ThrottlerModule.forRoot`, 60 requests/min per IP) in `app.module.ts` via `APP_GUARD` so
+      normal portfolio browsing (multiple GETs from `/projects`, `/skills`, `/experience`) never trips
+      it, then overrode it with a much stricter `@Throttle({ default: { limit: 5, ttl: 60_000 } })` on
+      `FitAnalysisController` specifically. Response headers now include `X-RateLimit-Limit` /
+      `-Remaining` / `-Reset`.
+    - **HTTP security headers** (`helmet`) — added `app.use(helmet())` in `main.ts`. Sets baseline
+      headers like `Content-Security-Policy`, `X-Content-Type-Options: nosniff`,
+      `X-Frame-Options: SAMEORIGIN`, `Strict-Transport-Security`. Low-cost, standard hardening for any
+      public-facing API, even a pure-JSON one.
+    - **Prompt-injection defense reviewed, not rebuilt** — this was already in decent shape from stage
+      2: the system prompt explicitly labels the job description as untrusted data (not instructions),
+      and `generateObject`'s schema constraint means injected text can't make the model emit anything
+      outside the fixed `FitReport` shape. No code change needed here; this is an inherent LLM
+      limitation (grounding reduces but can't 100% eliminate the risk of a model being swayed by
+      adversarial input) rather than something a rate limiter or header can fix.
+    - **Verified against a real running server**: killed a stale dev server holding port 3001, restarted
+      clean, fired 6 rapid `POST /fit-analysis` requests — first 5 returned `201`, the 6th returned
+      `429`. Confirmed `helmet`'s headers appear on a real response via `curl -I`. Full test suite still
+      green (9 suites / 22 tests) after both changes.
+
 ## What's next
 
-- Security hardening around `/fit-analysis`: rate limiting, deeper prompt-injection/abuse defenses —
-  required before this is safe to expose publicly.
 - Frontend: Job Fit Analyzer UI (job-description input, report display; streaming is a nice-to-have,
   not required since this is single request/response, not a chat).
 - MCP server exposing this same data as agent-callable tools.
