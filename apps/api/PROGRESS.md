@@ -118,6 +118,16 @@ project/skill/experience data to the frontend, and will host the Job Fit Analyze
   container (all modules, all services) without starting an HTTP server — the standard way to write
   one-off scripts/CLI tasks that need real access to app services like `PrismaService`, rather than
   reimplementing DB connections from scratch.
+- **RAG in one sentence**: instead of stuffing your entire dataset into every LLM prompt (expensive,
+  and drowns out what's actually relevant), *retrieve* only the most relevant pieces first (via vector
+  similarity), then *generate* an answer grounded in just those pieces — hence "Retrieval-Augmented Generation."
+- **`generateObject` vs. a raw chat completion**: `generateObject` (Vercel AI SDK) takes a Zod schema
+  and guarantees (via the SDK, working with the model's structured-output support) that what you get
+  back matches that schema — no manually parsing JSON out of a text response and hoping the model
+  didn't wrap it in a sentence or markdown fences.
+- **Zod `.describe()`**: the strings passed to `.describe()` on schema fields aren't just documentation
+  — they're sent to the model as part of the schema definition, effectively instructing it what each
+  field should contain. Worth writing them carefully.
 
 ## Local dev cheat sheet
 
@@ -164,12 +174,41 @@ is already running. You still need Docker Desktop itself open first — that par
   surface diffs. Treat any key placed in a tracked file as exposed to that session; rotate keys that
   went through this path rather than relying on session boundaries for secrecy.
 
+13. **Job Fit Analyzer, stage 2: retrieval + generation endpoint.**
+    - `EmbeddingsService.findSimilar(queryEmbedding, limit)` — raw SQL using pgvector's `<=>`
+      (cosine distance) operator, `ORDER BY distance ASC LIMIT n`. This is the "retrieval" half of RAG.
+    - New `FitAnalysisModule` (`src/fit-analysis/`) — `POST /fit-analysis`:
+      1. Validate the request body with a Zod schema (`jobDescription`, 50–8000 chars) via a small
+         reusable `ZodValidationPipe` (`src/common/pipes/`) — chose Zod over `class-validator` to stay
+         consistent with one validation library across the project.
+      2. Embed the job description (reusing `EmbeddingsService.embedText`).
+      3. Retrieve the top 12 closest `Embedding` rows.
+      4. Call `generateObject` (Vercel AI SDK, `@ai-sdk/openai`, model `gpt-4o-mini`) with a Zod
+         schema (`fit-report.schema.ts`) for the output shape — the model's response is validated
+         against that schema by the SDK, so we get a typed object back, not raw text to parse.
+      5. Log the result to `FitRequest` (job description, match score, full result JSON).
+    - Same lazy-construction pattern as `EmbeddingsService`: the AI SDK's OpenAI provider is built
+      inside `getModel()`, not the constructor.
+    - **Baseline prompt-injection hygiene included now** (cheap to do correctly from the start): the
+      system prompt explicitly tells the model the job description is untrusted data to analyze, not
+      instructions to follow, and the prompt clearly delimits it with `"""` fences. This is *not* full
+      hardening — no rate limiting, no abuse detection yet. That's still the next stage before this
+      could safely be exposed publicly.
+    - **Verified with a real call** (not mocked): posted a realistic Malmö fullstack job description,
+      got back a grounded 92% match report citing specific sources, correctly flagged PostgreSQL and
+      Kubernetes as gaps (matching the honestly-low proficiency ratings seeded for those skills — proof
+      the grounding is actually working, not just plausible-sounding), and confirmed the `FitRequest`
+      row was written. Also verified the 400 path: a too-short job description is rejected by Zod
+      before any OpenAI call is made.
+    - Added light unit tests for the Zod schema boundary and the validation pipe (9 suites / 22 tests
+      passing). Deep-mocking `generateObject` itself wasn't worth it — mocking an LLM call doesn't
+      prove much; the real end-to-end call above is the meaningful verification.
+
 ## What's next
 
-- Job Fit Analyzer, stage 2: a retrieval + generation endpoint — embed an incoming job description,
-  find the closest Embedding rows (cosine distance), and call the OpenAI API (via Vercel AI SDK) to
-  generate a grounded fit report with citations and a match score. Log each call to `FitRequest`.
-- Security hardening around that endpoint: zod input validation, rate limiting, prompt-injection defenses.
-- Frontend: Job Fit Analyzer UI (job-description input, streamed report).
+- Security hardening around `/fit-analysis`: rate limiting, deeper prompt-injection/abuse defenses —
+  required before this is safe to expose publicly.
+- Frontend: Job Fit Analyzer UI (job-description input, report display; streaming is a nice-to-have,
+  not required since this is single request/response, not a chat).
 - MCP server exposing this same data as agent-callable tools.
 - Dockerize the API, Terraform for AWS (RDS, ECS Fargate, Secrets Manager), GitHub Actions CI/CD.

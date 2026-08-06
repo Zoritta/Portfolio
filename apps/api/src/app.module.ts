@@ -7,6 +7,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { SkillsModule } from './skills/skills.module';
 import { ExperienceModule } from './experience/experience.module';
 import { EmbeddingsModule } from './embeddings/embeddings.module';
+import { FitAnalysisModule } from './fit-analysis/fit-analysis.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { EmbeddingsModule } from './embeddings/embeddings.module';
     SkillsModule,
     ExperienceModule,
     EmbeddingsModule,
+    FitAnalysisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

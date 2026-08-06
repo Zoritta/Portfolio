@@ -6,6 +6,13 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 
+export type SimilarEmbedding = {
+  sourceType: string;
+  sourceId: string;
+  content: string;
+  distance: number;
+};
+
 @Injectable()
 export class EmbeddingsService {
   private openai: OpenAI | null = null;
@@ -43,6 +50,18 @@ export class EmbeddingsService {
       VALUES (${randomUUID()}, ${sourceType}, ${sourceId}, ${content}, ${vectorLiteral}::vector, now())
       ON CONFLICT ("sourceType", "sourceId")
       DO UPDATE SET content = EXCLUDED.content, embedding = EXCLUDED.embedding
+    `;
+  }
+
+  /** Returns the `limit` Embedding rows whose vectors are closest (cosine distance) to `queryEmbedding`. */
+  async findSimilar(queryEmbedding: number[], limit: number): Promise<SimilarEmbedding[]> {
+    const vectorLiteral = `[${queryEmbedding.join(',')}]`;
+
+    return this.prisma.$queryRaw<SimilarEmbedding[]>`
+      SELECT "sourceType", "sourceId", "content", (embedding <=> ${vectorLiteral}::vector) as distance
+      FROM "Embedding"
+      ORDER BY distance ASC
+      LIMIT ${limit}
     `;
   }
 }
