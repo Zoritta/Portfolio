@@ -60,6 +60,43 @@ the flagship AI feature where a visitor pastes a job description and gets a RAG-
       through the actual form in a real browser: submitted a job description, got back a real match
       score and interview questions end-to-end.
 
+8. **UI/UX polish pass.** Before adding more tech, made the app *feel* finished.
+    - **Manual dark/light toggle** (`next-themes`) — replaced the previous OS-only
+      `prefers-color-scheme` approach. Used the library rather than hand-rolling it because getting
+      this right (no flash-of-wrong-theme on load) needs a synchronous script injected before first
+      paint, which is easy to get subtly wrong by hand. `globals.css` now defines
+      `@custom-variant dark (&:where(.dark, .dark *))` so every existing `dark:` utility class now
+      matches a `.dark` class on `<html>` instead of the media query — no component markup had to
+      change. `ThemeToggle.tsx` renders a placeholder `<div>` until mounted client-side (its real
+      icon depends on `resolvedTheme`, which is unknown during server rendering — rendering it
+      immediately would cause a hydration mismatch).
+    - **Reconsidered and dropped a homepage Suspense/streaming refactor** — initially planned to
+      split Projects/Skills/Experience into separate `<Suspense>`-wrapped sections with skeletons.
+      Correctly called out as overkill: all three already fetch in parallel from one fast local
+      backend via a single `Promise.all`, so splitting them wouldn't change what a visitor perceives,
+      just add three files and duplicated error handling. Kept `page.tsx` as-is. Good example of a
+      pattern being architecturally interesting but not worth its complexity for this specific case.
+    - **Project cards**: `repoUrl`, `liveUrl`, and `highlights` were being fetched but never
+      rendered — a real gap, now fixed (conditionally rendered, since both currently-seeded projects
+      have `liveUrl: null`). Added hover elevation (`hover:shadow-md`).
+    - **Empty states** added for all three homepage sections (in case Projects/Skills/Experience
+      ever return empty) via a small shared `EmptyState` component.
+    - **Job Fit Analyzer loading skeleton**: replaced the plain "Analyzing…" button-text-only loading
+      state with a proper skeleton (new `Skeleton.tsx` primitive, `animate-pulse`) shaped like the
+      real report, plus a `fade-in` CSS keyframe (`globals.css`) applied to both the success report
+      and error message when they appear. This is a loading *indicator*, not streaming — the backend
+      still returns the whole `FitReport` in one response only once `generateObject` fully completes;
+      nothing is sent incrementally. Real LLM-token streaming (`streamObject`/`useObject`) was
+      considered and skipped, same reasoning as before: a schema-validated structured report doesn't
+      benefit from rendering partial/invalid JSON mid-generation.
+    - **`FormEvent` → `SubmitEvent`**: `@types/react` (React 19) marks `FormEvent` as deprecated —
+      it was never backed by a real DOM event; `SubmitEvent<T>` is the correct type for a form's
+      `onSubmit` handler. Caught by a real (not stale) type-checker diagnostic.
+    - **Verified**: `npx tsc --noEmit` clean throughout, real data confirmed via `curl` against the
+      live API (e.g. confirmed `liveUrl: null` on both seeded projects directly, so the missing "Live"
+      link is correct data, not a rendering bug), and a human click-through confirmed the toggle,
+      cards, and skeleton/fade-in all work in a real browser.
+
 ## Key concepts (for future-me)
 
 - **Server Component data fetching**: any `async function` page/component in the App Router can
@@ -80,6 +117,14 @@ the flagship AI feature where a visitor pastes a job description and gets a RAG-
   handlers that run after the page has loaded — that only works in a Client Component (`'use client'`
   at the top of the file). A page can freely mix both: a Server Component parent rendering a Client
   Component child, which is exactly what `page.tsx` → `<FitAnalyzer />` does here.
+- **Loading skeleton vs. streaming**: a skeleton is just client-side UI shown while waiting on a
+  single request/response cycle — no different network behavior involved. Streaming means the server
+  sends a response in chunks that the client renders progressively (e.g. Suspense-based streaming
+  SSR, or LLM token streaming). The two are easy to conflate but solve different problems.
+- **`@custom-variant dark (&:where(.dark, .dark *))`** (Tailwind v4, `globals.css`): redefines what
+  the `dark:` prefix means. Tailwind v4's default is "matches `prefers-color-scheme: dark`"; this
+  makes it "matches when a `.dark` class exists on `<html>` or an ancestor" instead — required for
+  `next-themes` (or anything) to let a user manually override the OS preference.
 
 ## Local dev cheat sheet
 
@@ -93,6 +138,10 @@ npm run dev:web
 
 ## What's next
 
-- Testing: Vitest/Jest for units, Playwright for e2e (including the Job Fit Analyzer form).
+- Better, more specific error messages surfaced from the API (in progress on the backend side).
+- Testing: Jest/React Testing Library for component units, Playwright for e2e (including the Job
+  Fit Analyzer form).
 - Deploy to Vercel; wire up environment variables for the AWS-hosted API URL (both `API_URL` and
   `NEXT_PUBLIC_API_URL` will need to point at the deployed backend).
+- `npm audit` flagged 3 high-severity issues in `next`'s own transitive deps (`postcss`, `sharp`) —
+  pre-existing, unrelated to anything built here. Worth a dedicated look, not fixed yet.
