@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { analyzeJobFit, FitAnalysisError, type FitReport } from "@/lib/api";
+import { Skeleton } from "@/components/Skeleton";
 
 const MIN_LENGTH = 50;
 const MAX_LENGTH = 8000;
@@ -21,7 +22,7 @@ export function FitAnalyzer() {
   const length = jobDescription.trim().length;
   const isValidLength = length >= MIN_LENGTH && length <= MAX_LENGTH;
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     if (!isValidLength || status === "loading") return;
 
@@ -56,14 +57,14 @@ export function FitAnalyzer() {
           rows={8}
           className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
         />
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-zinc-500 dark:text-zinc-500">
             {length} / {MAX_LENGTH} characters (min {MIN_LENGTH})
           </span>
           <button
             type="submit"
             disabled={!isValidLength || status === "loading"}
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-50 dark:text-black"
+            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-50 dark:text-black"
           >
             {status === "loading" ? "Analyzing…" : "Analyze Fit"}
           </button>
@@ -71,13 +72,31 @@ export function FitAnalyzer() {
       </form>
 
       {status === "error" && error && (
-        <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400">
+        <p className="mt-4 animate-[fade-in_0.3s_ease-out] rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400">
           {error}
         </p>
       )}
 
-      {status === "success" && report && (
+      {status === "loading" && (
         <div className="mt-6 flex flex-col gap-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+          <div>
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="mt-3 h-4 w-full" />
+            <Skeleton className="mt-2 h-4 w-4/5" />
+          </div>
+          <div>
+            <Skeleton className="h-4 w-20" />
+            <div className="mt-2 flex flex-col gap-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {status === "success" && report && (
+        <div className="mt-6 flex animate-[fade-in_0.4s_ease-out] flex-col gap-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
           <div>
             <span className={`text-3xl font-semibold ${scoreColor(report.matchScore)}`}>
               {report.matchScore}%
