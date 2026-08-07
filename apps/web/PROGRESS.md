@@ -97,6 +97,31 @@ the flagship AI feature where a visitor pastes a job description and gets a RAG-
       link is correct data, not a rendering bug), and a human click-through confirmed the toggle,
       cards, and skeleton/fade-in all work in a real browser.
 
+9. **Frontend test setup + component tests.** Zero test tooling existed before this — set up
+   Jest + React Testing Library, matching Jest as the test runner across both `apps/api` and
+   `apps/web` (one tool to know, not two).
+    - `npm install -D jest jest-environment-jsdom @testing-library/react @testing-library/jest-dom
+      @testing-library/user-event @types/jest`.
+    - `jest.config.ts` uses `next/jest` (Next's official helper — auto-configures the SWC
+      transform, CSS/asset mocking) plus an explicit `moduleNameMapper` for the `@/*` alias: Next's
+      automatic alias detection from `tsconfig.json` wasn't picking it up on this Next.js version,
+      so it's declared directly rather than spending time root-causing a canary-version quirk.
+      Also had to change `import nextJest from "next/jest"` to `"next/jest.js"` — this Next version
+      enforces strict ESM resolution for that subpath, which requires the explicit extension.
+    - `jest.setup.ts` imports `@testing-library/jest-dom` for matchers like `.toBeInTheDocument()`.
+    - **`FitAnalyzer.spec.tsx`** (3 tests) — the submit button stays disabled until the job
+      description clears the 50-char minimum; a successful submit shows a loading state then the
+      rendered report (score, summary, strengths, gaps); a rejected `FitAnalysisError` renders its
+      message. Mocks only `analyzeJobFit` from `@/lib/api` (via `jest.requireActual` for everything
+      else) — `FitAnalysisError` has to stay the *real* class, since the component does
+      `err instanceof FitAnalysisError` to decide which message to show; mocking it would break that.
+    - **Deliberately skipped a `ThemeToggle` test** — it's ~30 lines of trivial branching (pick an
+      icon, call `setTheme` with the opposite value); a bug there is immediately obvious visually
+      and purely cosmetic. `FitAnalyzer` has real branching logic (validation boundary, three
+      distinct error paths, loading/success transitions) tied to the flagship feature, where a
+      regression could actually mislead a visitor — that's where test investment pays off, not here.
+    - Added `npm test` / `npm test:watch` scripts, matching `apps/api`'s naming.
+
 ## Key concepts (for future-me)
 
 - **Server Component data fetching**: any `async function` page/component in the App Router can
@@ -134,13 +159,15 @@ npm run dev:api
 
 # in a second terminal, from repo root — starts Next.js (:3000)
 npm run dev:web
+
+# from apps/web
+npm test          # run component tests once
+npm run test:watch
 ```
 
 ## What's next
 
-- Better, more specific error messages surfaced from the API (in progress on the backend side).
-- Testing: Jest/React Testing Library for component units, Playwright for e2e (including the Job
-  Fit Analyzer form).
+- Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running API).
 - Deploy to Vercel; wire up environment variables for the AWS-hosted API URL (both `API_URL` and
   `NEXT_PUBLIC_API_URL` will need to point at the deployed backend).
 - `npm audit` flagged 3 high-severity issues in `next`'s own transitive deps (`postcss`, `sharp`) —
