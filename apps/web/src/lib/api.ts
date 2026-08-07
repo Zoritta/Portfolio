@@ -1,4 +1,5 @@
 const API_URL = process.env.API_URL ?? 'http://localhost:3001';
+const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export type Project = {
   id: string;
@@ -26,6 +27,14 @@ export type Experience = {
   endDate: string | null;
 };
 
+export type FitReport = {
+  matchScore: number;
+  summary: string;
+  strengths: { point: string; citedSourceIndexes: number[] }[];
+  gaps: { point: string }[];
+  suggestedInterviewQuestions: string[];
+};
+
 async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
   if (!response.ok) {
@@ -44,4 +53,34 @@ export function getSkills() {
 
 export function getExperience() {
   return fetchJson<Experience[]>('/experience');
+}
+
+export class FitAnalysisError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'FitAnalysisError';
+  }
+}
+
+export async function analyzeJobFit(jobDescription: string): Promise<FitReport> {
+  const response = await fetch(`${PUBLIC_API_URL}/fit-analysis`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobDescription }),
+  });
+
+  if (response.status === 429) {
+    throw new FitAnalysisError('Too many requests — please wait a minute and try again.', 429);
+  }
+  if (response.status === 400) {
+    throw new FitAnalysisError('Job description must be between 50 and 8000 characters.', 400);
+  }
+  if (!response.ok) {
+    throw new FitAnalysisError('Something went wrong analyzing this job description.', response.status);
+  }
+
+  return response.json();
 }

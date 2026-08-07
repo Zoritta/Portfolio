@@ -1,4 +1,5 @@
 import { getExperience, getProjects, getSkills, type Skill } from "@/lib/api";
+import { FitAnalyzer } from "@/components/FitAnalyzer";
 
 function formatDate(value: string | null) {
   if (!value) return "Present";
@@ -46,6 +47,8 @@ export default async function Home() {
             Fullstack Developer — Malmö, Sweden
           </p>
         </header>
+
+        <FitAnalyzer />
 
         <section>
           <h2 className="text-xl font-semibold text-black dark:text-zinc-50">Projects</h2>

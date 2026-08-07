@@ -6,7 +6,7 @@ Kept as a personal reference until the project is done — not meant for recruit
 ## What this app is
 
 The frontend of the portfolio: a Next.js/TypeScript app deployed to Vercel. Displays projects,
-skills, and experience (pulled from the `apps/api` backend), and will host the Job Fit Analyzer UI —
+skills, and experience (pulled from the `apps/api` backend), and hosts the Job Fit Analyzer UI —
 the flagship AI feature where a visitor pastes a job description and gets a RAG-grounded fit report.
 
 ## Stack decisions (and why)
@@ -36,6 +36,30 @@ the flagship AI feature where a visitor pastes a job description and gets a RAG-
 6. Verified against real running servers (both started, HTML fetched, confirmed it contains actual
    seeded data like "Insighta Inc." and "Vercel AI SDK" — not just that the code compiles).
 
+7. **Job Fit Analyzer UI.**
+    - `src/lib/api.ts` gained a `FitReport` type (hand-mirrored from the backend's Zod schema — the
+      two apps share no code, so the frontend just declares a matching shape), an `analyzeJobFit()`
+      client function, and a `FitAnalysisError` class carrying an HTTP `status` so the UI can branch
+      on *why* a request failed (429 vs. 400 vs. other) without re-parsing message strings.
+    - `analyzeJobFit()` reads a **second** API URL constant, `NEXT_PUBLIC_API_URL`, instead of the
+      existing `API_URL` — see Key concepts below for why two constants are needed for the same value.
+    - `src/components/FitAnalyzer.tsx` — a `'use client'` component: textarea + submit button, local
+      `useState` for the draft text and `idle`/`loading`/`error`/`success` status, client-side length
+      validation (50–8000 chars) mirroring the backend's Zod bounds so the button disables before a
+      doomed request is even sent. Renders the match score (color-coded by band), summary, strengths,
+      gaps, and suggested interview questions on success.
+    - Wired into `src/app/page.tsx` directly under the header, ahead of Projects — it's the flagship
+      feature, so it's the first thing a visitor sees.
+    - Calls the NestJS API **directly from the browser** (not proxied through a Next.js API route) —
+      the backend's existing CORS config already allows `http://localhost:3000`, and calling it
+      directly keeps the two-service architecture visible in the browser's network tab, which is part
+      of the point of this project.
+    - Added `NEXT_PUBLIC_API_URL=http://localhost:3001` to `.env.local`.
+    - **Verified for real**: confirmed the static HTML renders correctly via `curl` (couldn't verify
+      client-side interactivity that way — `curl` doesn't execute JavaScript), then had a human click
+      through the actual form in a real browser: submitted a job description, got back a real match
+      score and interview questions end-to-end.
+
 ## Key concepts (for future-me)
 
 - **Server Component data fetching**: any `async function` page/component in the App Router can
@@ -46,6 +70,16 @@ the flagship AI feature where a visitor pastes a job description and gets a RAG-
   revisiting (e.g. `revalidate`) once the site has real traffic.
 - Server-side fetches (Server Component → API) don't hit CORS at all — CORS is a *browser* rule.
   We added it anyway because upcoming client-side features (Job Fit Analyzer) will need it.
+- **`NEXT_PUBLIC_` env var prefix**: Server Components run in Node.js on the server, so they can read
+  any env var (`API_URL`). Client Components run in the visitor's browser after hydration, which has
+  no access to server env vars at all — Next.js only inlines vars prefixed `NEXT_PUBLIC_` into the
+  JS bundle it ships to the browser. Same backend URL, two constants (`API_URL` / `NEXT_PUBLIC_API_URL`),
+  because *where the code runs* determines which one is even readable.
+- **Server vs. Client Components, in practice**: the homepage is a Server Component (fetches data,
+  ships finished HTML, no interactivity needed). `FitAnalyzer` needs `useState` and click/submit
+  handlers that run after the page has loaded — that only works in a Client Component (`'use client'`
+  at the top of the file). A page can freely mix both: a Server Component parent rendering a Client
+  Component child, which is exactly what `page.tsx` → `<FitAnalyzer />` does here.
 
 ## Local dev cheat sheet
 
@@ -59,6 +93,6 @@ npm run dev:web
 
 ## What's next
 
-- Job Fit Analyzer UI: job-description input, streamed fit report (Vercel AI SDK), match score, citations.
-- Testing: Vitest/Jest for units, Playwright for e2e.
-- Deploy to Vercel; wire up environment variables for the AWS-hosted API URL.
+- Testing: Vitest/Jest for units, Playwright for e2e (including the Job Fit Analyzer form).
+- Deploy to Vercel; wire up environment variables for the AWS-hosted API URL (both `API_URL` and
+  `NEXT_PUBLIC_API_URL` will need to point at the deployed backend).
