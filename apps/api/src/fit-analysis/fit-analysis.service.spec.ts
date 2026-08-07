@@ -1,0 +1,100 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { EmbeddingsService } from '../embeddings/embeddings.service';
+import { FitAnalysisService } from './fit-analysis.service';
+import type { FitReport } from './schemas/fit-report.schema';
+
+// `ai` and `@ai-sdk/openai` ship ESM-only, which Jest's default CJS transform can't parse.
+// Mocking them outright (no jest.requireActual) avoids ever loading the real files.
+// The stand-in class is declared *inside* the factory: jest.mock() calls are hoisted above
+// normal declarations, so a class defined at module scope wouldn't be initialized yet here.
+jest.mock('ai', () => {
+  class MockAPICallError extends Error {
+    isRetryable: boolean;
+    constructor(opts: { message: string; isRetryable?: boolean }) {
+      super(opts.message);
+      this.name = 'APICallError';
+      this.isRetryable = opts.isRetryable ?? false;
+    }
+  }
+  return {
+    generateObject: jest.fn(),
+    APICallError: MockAPICallError,
+  };
+});
+jest.mock('@ai-sdk/openai', () => ({
+  createOpenAI: jest.fn(() => jest.fn()),
+}));
+
+const { generateObject: generateObjectMockFn, APICallError } = jest.requireMock('ai') as {
+  generateObject: jest.Mock;
+  APICallError: typeof MockAPICallError;
+};
+const generateObjectMock = generateObjectMockFn;
+
+describe('FitAnalysisService', () => {
+  let service: FitAnalysisService;
+
+  const prismaMock = { fitRequest: { create: jest.fn() } };
+  const embeddingsMock = { embedText: jest.fn(), findSimilar: jest.fn() };
+  const configMock = { get: jest.fn().mockReturnValue('test-api-key') };
+
+  const report: FitReport = {
+    matchScore: 80,
+    summary: 'Good fit.',
+    strengths: [{ point: 'React experience', citedSourceIndexes: [0] }],
+    gaps: [],
+    suggestedInterviewQuestions: ['Tell me about a React project.'],
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    embeddingsMock.embedText.mockResolvedValue([0.1, 0.2]);
+    embeddingsMock.findSimilar.mockResolvedValue([{ sourceType: 'skill', sourceId: '1', content: 'React', distance: 0.1 }]);
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        FitAnalysisService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: EmbeddingsService, useValue: embeddingsMock },
+        { provide: ConfigService, useValue: configMock },
+      ],
+    }).compile();
+
+    service = module.get(FitAnalysisService);
+  });
+
+  it('returns the generated report and logs it as a FitRequest', async () => {
+    generateObjectMock.mockResolvedValue({ object: report });
+
+    const result = await service.analyze('a'.repeat(60));
+
+    expect(result).toEqual(report);
+    expect(prismaMock.fitRequest.create).toHaveBeenCalledWith({
+      data: { jobDescription: 'a'.repeat(60), matchScore: report.matchScore, result: report },
+    });
+  });
+
+  it('maps a retryable AI provider error to ServiceUnavailableException', async () => {
+    generateObjectMock.mockRejectedValue(new APICallError({ message: 'rate limited', isRetryable: true }));
+
+    await expect(service.analyze('a'.repeat(60))).rejects.toThrow(ServiceUnavailableException);
+  });
+
+  it('maps an unexpected error to InternalServerErrorException', async () => {
+    generateObjectMock.mockRejectedValue(new Error('something unrelated broke'));
+
+    await expect(service.analyze('a'.repeat(60))).rejects.toThrow(InternalServerErrorException);
+  });
+
+  it('still returns the report even if logging the FitRequest fails', async () => {
+    generateObjectMock.mockResolvedValue({ object: report });
+    prismaMock.fitRequest.create.mockRejectedValue(new Error('db unavailable'));
+
+    const result = await service.analyze('a'.repeat(60));
+
+    expect(result).toEqual(report);
+  });
+});

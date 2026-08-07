@@ -133,6 +133,24 @@ project/skill/experience data to the frontend, and will host the Job Fit Analyze
   `APP_GUARD` so it applies to every route by default, then overridden per-route with `@Throttle(...)`
   where a stricter (or looser) limit makes sense — global + per-route override, not one flat number
   everywhere, since a free `GET` and a paid-API-backed `POST` don't carry the same abuse risk.
+- **Retryable vs. non-retryable errors**: the pragmatic, common pattern for calling an external API —
+  catch failures at one boundary, check whether the SDK's error says the failure is transient (rate
+  limit, timeout, the provider's own 5xx), and map only those to a `503` telling the client to try
+  again. Everything else becomes a generic `500` with no internal details leaked, but logged
+  server-side (`Logger`) so it's actually debuggable. Not every SDK-specific error subtype needs its
+  own branch — two buckets (retryable / not) covers what a client can actually act on.
+- **Jest can't parse ESM-only packages by default**: Jest's default config skips transforming anything
+  in `node_modules`, assuming installed packages are plain CommonJS. Modern SDKs (`ai`, `@ai-sdk/openai`
+  here) increasingly ship ESM-only, which breaks under that assumption — even though the real app runs
+  fine, because Node's own resolver (not Jest's) correctly picks a CJS-compatible build via the
+  package's `exports` field. Fix: mock the ESM package outright (`jest.mock('ai', factory)`) so the
+  real file is never loaded/parsed — `jest.requireActual(...)` defeats this, since it deliberately
+  loads the real (ESM) file.
+- **`jest.mock()` hoisting**: Jest moves every `jest.mock()` call to the top of the file — above even
+  `import` statements — before anything else runs, so mocking can affect those imports. This means a
+  mock factory can't reference a variable/class declared later in the same file (it isn't initialized
+  yet at that relocated position); declare it *inside* the factory function's body instead, since the
+  factory itself only runs later, when the mock is actually used.
 
 ## Local dev cheat sheet
 
@@ -233,9 +251,48 @@ is already running. You still need Docker Desktop itself open first — that par
       `429`. Confirmed `helmet`'s headers appear on a real response via `curl -I`. Full test suite still
       green (9 suites / 22 tests) after both changes.
 
+15. **Job Fit Analyzer, stage 4: specific error handling + real test coverage.**
+    - **Before**: any failure inside `analyze()` (OpenAI down, rate-limited, DB write failure) fell
+      through uncaught to Nest's default generic `500 Internal server error`, with nothing logged
+      server-side — no way to tell "OpenAI is having an outage" from "our own code broke" from the logs.
+    - **Split `analyze()` into two parts** — `generateReport()` (the AI-dependent work: embed, retrieve,
+      `generateObject`) and `logRequest()` (writing the `FitRequest` row), each with its own try/catch,
+      because they have different failure semantics:
+      - `generateReport()` failures are user-facing: checked `error instanceof APICallError &&
+        error.isRetryable` (from the `ai` SDK) or `error instanceof APIError` (from `openai`) with a
+        429/5xx `.status` — these map to `ServiceUnavailableException` (503, "temporarily unavailable,
+        try again"). Anything else maps to a generic `InternalServerErrorException` (500) — deliberately
+        not leaking internal details (e.g. a misconfigured API key) to the client.
+      - `logRequest()` failures are **not** user-facing: by the time this runs, the visitor already has
+        a real report. A failed analytics write shouldn't turn a successful request into an error, so
+        this is caught, logged, and swallowed — the response still succeeds.
+      - Added `Logger` (NestJS's built-in) so both failure paths are actually visible server-side now,
+        instead of vanishing.
+    - **Frontend** (`apps/web/src/lib/api.ts`): added a `503` branch to `analyzeJobFit()` ("The AI
+      service is temporarily unavailable...") alongside the existing 400/429 handling, and made the
+      generic fallback message slightly more honest ("Something went wrong on our end").
+    - **Real bug found while wiring this up, not cosmetic**: `generateObject` itself is marked
+      `@deprecated` in the installed `ai` SDK version (`Use generateText with an output setting
+      instead`) — still fully functional, not fixed now to avoid scope creep on this stage, but worth
+      migrating later.
+    - **New tests**: `embeddings.service.spec.ts` (4 tests — API-key-missing guard, `embedText`,
+      `upsert`, `findSimilar`), `fit-analysis.service.spec.ts` (4 tests — happy path, retryable-error →
+      503, unexpected-error → 500, and that a `FitRequest` logging failure doesn't fail the overall
+      request), `fit-analysis.controller.spec.ts` (1 delegation test, matching the existing controller
+      test style). 12 suites / 31 tests passing.
+    - **Real, non-obvious Jest problem hit and fixed**: `ai` and `@ai-sdk/openai` ship ESM-only, which
+      Jest's default CommonJS transform can't parse (`node_modules` is untransformed by default) —
+      the real app works because Node's own resolver picks the CJS-compatible build via the package's
+      `exports` field, but Jest's resolver doesn't make the same choice. Fixed by mocking both modules
+      outright (`jest.mock('ai', factory)`, no `jest.requireActual`) so the real ESM files are never
+      loaded. Also hit and fixed a `jest.mock()` hoisting issue: `jest.mock()` calls are moved above
+      all other code (even `import`s) before the file runs, so a class referenced by the factory but
+      declared elsewhere in the file isn't initialized yet at that point — fixed by declaring the
+      stand-in class *inside* the factory function itself.
+
 ## What's next
 
-- Frontend: Job Fit Analyzer UI (job-description input, report display; streaming is a nice-to-have,
-  not required since this is single request/response, not a chat).
+- Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
+  `ai` SDK version, still functional).
 - MCP server exposing this same data as agent-callable tools.
 - Dockerize the API, Terraform for AWS (RDS, ECS Fargate, Secrets Manager), GitHub Actions CI/CD.

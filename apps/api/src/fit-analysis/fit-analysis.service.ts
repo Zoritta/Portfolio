@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createOpenAI } from '@ai-sdk/openai';
-import { generateObject, type LanguageModel } from 'ai';
+import { generateObject, APICallError, type LanguageModel } from 'ai';
+import { APIError } from 'openai';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmbeddingsService, type SimilarEmbedding } from '../embeddings/embeddings.service';
@@ -25,6 +26,8 @@ Rules:
 
 @Injectable()
 export class FitAnalysisService {
+  private readonly logger = new Logger(FitAnalysisService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly embeddings: EmbeddingsService,
@@ -57,24 +60,54 @@ export class FitAnalysisService {
   }
 
   async analyze(jobDescription: string): Promise<FitReport> {
-    const queryEmbedding = await this.embeddings.embedText(jobDescription);
-    const sources = await this.embeddings.findSimilar(queryEmbedding, RETRIEVAL_TOP_K);
-
-    const { object: report } = await generateObject({
-      model: this.getModel(),
-      schema: fitReportSchema,
-      system: SYSTEM_PROMPT,
-      prompt: this.buildPrompt(jobDescription, sources),
-    });
-
-    await this.prisma.fitRequest.create({
-      data: {
-        jobDescription,
-        matchScore: report.matchScore,
-        result: report as unknown as Prisma.InputJsonValue,
-      },
-    });
-
+    const report = await this.generateReport(jobDescription);
+    await this.logRequest(jobDescription, report);
     return report;
+  }
+
+  private async generateReport(jobDescription: string): Promise<FitReport> {
+    try {
+      const queryEmbedding = await this.embeddings.embedText(jobDescription);
+      const sources = await this.embeddings.findSimilar(queryEmbedding, RETRIEVAL_TOP_K);
+
+      const { object: report } = await generateObject({
+        model: this.getModel(),
+        schema: fitReportSchema,
+        system: SYSTEM_PROMPT,
+        prompt: this.buildPrompt(jobDescription, sources),
+      });
+
+      return report;
+    } catch (error) {
+      this.logger.error('Fit report generation failed', error instanceof Error ? error.stack : error);
+
+      const isRetryable =
+        (error instanceof APICallError && error.isRetryable) ||
+        (error instanceof APIError && (error.status === 429 || (error.status ?? 0) >= 500));
+
+      if (isRetryable) {
+        throw new ServiceUnavailableException(
+          'The AI service is temporarily unavailable. Please try again in a moment.',
+        );
+      }
+
+      throw new InternalServerErrorException('Something went wrong analyzing this job description.');
+    }
+  }
+
+  private async logRequest(jobDescription: string, report: FitReport): Promise<void> {
+    try {
+      await this.prisma.fitRequest.create({
+        data: {
+          jobDescription,
+          matchScore: report.matchScore,
+          result: report as unknown as Prisma.InputJsonValue,
+        },
+      });
+    } catch (error) {
+      // Logging the request is bookkeeping, not the user-facing feature — the visitor already has
+      // their report. Don't fail the request just because this write failed; log and move on.
+      this.logger.error('Failed to log FitRequest', error instanceof Error ? error.stack : error);
+    }
   }
 }

@@ -78,8 +78,11 @@ export async function analyzeJobFit(jobDescription: string): Promise<FitReport> 
   if (response.status === 400) {
     throw new FitAnalysisError('Job description must be between 50 and 8000 characters.', 400);
   }
+  if (response.status === 503) {
+    throw new FitAnalysisError('The AI service is temporarily unavailable. Please try again in a moment.', 503);
+  }
   if (!response.ok) {
-    throw new FitAnalysisError('Something went wrong analyzing this job description.', response.status);
+    throw new FitAnalysisError('Something went wrong on our end — please try again shortly.', response.status);
   }
 
   return response.json();
