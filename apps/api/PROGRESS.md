@@ -290,9 +290,69 @@ is already running. You still need Docker Desktop itself open first — that par
       declared elsewhere in the file isn't initialized yet at that point — fixed by declaring the
       stand-in class *inside* the factory function itself.
 
+16. **Dockerized the API.** `apps/api/Dockerfile`, two stages (`build`, `runtime`), built from the
+    **repo root** as context (`docker build -f apps/api/Dockerfile -t portfolio-api .`) — this is an
+    npm-workspaces monorepo, so `apps/api`'s `package-lock.json` actually lives at the repo root, not
+    locally; building from `apps/api` alone wouldn't see it.
+    - **Why `docker-compose.yml` wasn't touched**: Compose is a *local-only* orchestration tool — it's
+      never used in the actual AWS deployment (ECS Fargate pulls individual images from ECR directly;
+      Terraform defines networking/scaling, not Compose). The existing Postgres-only Compose file stays
+      exactly as it is for fast local dev (`npm run dev:api` with hot-reload is much faster to iterate
+      on than rebuilding an image per change). The frontend never gets a Dockerfile either — it deploys
+      to Vercel via a completely separate, non-Docker pipeline. And production Postgres won't be a
+      container at all — Terraform will provision **RDS** (self-hosting a stateful DB in a container is
+      a well-known anti-pattern; the local Compose Postgres is dev-only).
+    - **Same base image in both stages** (`node:22-alpine`) specifically so the Prisma query engine
+      binary generated in `build` is guaranteed compatible with what actually runs it in `runtime` —
+      Prisma's engine is a native binary tied to the OS/libc it was generated on.
+    - **Copies the full `node_modules` from `build` into `runtime`**, rather than a separately slimmed
+      prod-only install — a deliberate correctness-over-size tradeoff, since a separate prod install
+      risks landing the generated Prisma client in a differently-shaped `node_modules` tree than the
+      one actually shipped (a real, common Prisma-in-Docker footgun).
+    - **Runs as the non-root `node` user** the base image ships with (`USER node`, plus
+      `--chown=node:node` on the `COPY --from=build` lines) — checked with Docker Scout, which flags
+      "runs as root" as a real, standard Docker security finding. Reviewed the base image's other
+      flagged CVEs (1 critical/7 high, all in a `tar` package bundled in the base image's own *build*
+      tooling, not something our runtime code ever calls) and deliberately did not chase them — not
+      realistically exploitable through this app, and chasing 100% clean scans on a base image isn't
+      standard practice.
+    - **Real bugs found by actually building and running the image, not just writing it**:
+      - `npx prisma generate` failed (`prisma: not found`) run from the repo-root context — `prisma`
+        is a devDependency scoped to the `apps/api` workspace, and npm workspaces don't always hoist a
+        workspace's own `node_modules/.bin` symlinks to the root. Fixed with `npm exec
+        --workspace=apps/api -- prisma generate`, which correctly resolves within that workspace.
+      - **No `.dockerignore` existed initially** — `COPY apps/api apps/api` was silently copying the
+        *local, Windows-built* `apps/api/node_modules` (already containing a working generated Prisma
+        client from local dev) straight into the image, which would have shipped broken native
+        binaries to a Linux container. It also silently copied `apps/api/.env` (the real
+        `OPENAI_API_KEY`) into the intermediate `build` stage. Verified the *final* `runtime` image
+        never actually contained it (the runtime stage only copies specific named paths, and `.env`
+        wasn't one of them) — but it was real material in a local build-cache layer regardless. Fixed
+        with a root `.dockerignore` (`node_modules`, `.git`, `**/.env*` with `.env.example`
+        re-allowed, `dist`, `apps/web`), then rebuilt with `--no-cache` to purge the tainted layer.
+        Build context transfer dropped from 338MB to 6.2KB as a side effect.
+      - Adding `.dockerignore` then exposed a **real ordering bug**: `nest build` (TypeScript
+        compilation) was running *before* `prisma generate` — our code imports types from the
+        generated Prisma client (e.g. `Prisma.InputJsonValue`), so the build only "worked" before
+        because the leaked local `node_modules` happened to already have a generated client sitting in
+        it. Fixed by reordering: `prisma generate` now runs before `nest build`.
+      - The final `CMD` referenced `apps/api/dist/main`, but Nest's compiled output is actually at
+        `dist/src/main.js` — TypeScript infers `rootDir` from *all* input files, and since the project
+        compiles both `src/**/*.ts` and `prisma/seed.ts` (two separate top-level directories), it
+        preserves that nesting under `dist/`. This is the same bug the existing (and, until now, never
+        actually run) `start:prod` script had — `node dist/main` — fixed there too
+        (`node dist/src/main`).
+    - **Verified against the real local Postgres container**, not just "the build succeeded": ran the
+      image on the same Docker network as the existing Compose Postgres, confirmed `Nest application
+      successfully started` in the logs, then a real `curl` against `/projects` returned actual seeded
+      data through the container and showed the expected `helmet`/`throttler` response headers.
+
 ## What's next
 
 - Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
   `ai` SDK version, still functional).
+- Terraform for AWS (RDS with pgvector, ECR, ECS Fargate, Secrets Manager) — requires an AWS account
+  with credentials configured locally, and creates real, billed resources; pausing here for that
+  confirmation before writing/applying any of it.
+- GitHub Actions CI/CD (build/push image, run Terraform).
 - MCP server exposing this same data as agent-callable tools.
-- Dockerize the API, Terraform for AWS (RDS, ECS Fargate, Secrets Manager), GitHub Actions CI/CD.
