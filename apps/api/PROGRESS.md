@@ -347,6 +347,66 @@ is already running. You still need Docker Desktop itself open first — that par
       successfully started` in the logs, then a real `curl` against `/projects` returned actual seeded
       data through the container and showed the expected `helmet`/`throttler` response headers.
 
+17. **GitHub Actions CI (Phase 3 of the roadmap).** `.github/workflows/ci.yml` — three parallel
+    jobs on every push/PR to `main`: `api` (lint, test, build), `web` (lint, test, build), `docker`
+    (proves `apps/api/Dockerfile` still builds; no registry push yet — that starts once Phase 4/5
+    gives us somewhere real to push to).
+    - **`npm ci` runs from the repo root**, not inside either app — same reason as the Dockerfile:
+      this is an npm workspaces monorepo, so both apps' dependencies are locked in the root
+      `package-lock.json`.
+    - **`prisma generate` runs before lint/test/build** in the `api` job, for the same reason it's a
+      separate step in the Dockerfile: a fresh CI runner has never generated the Prisma client, and
+      our code imports its generated types.
+    - **The `api` job's lint step deliberately does *not* call `npm run lint:api`.** That script has
+      `--fix` baked in for local dev convenience — fine on a machine, wrong in CI, since CI has
+      nowhere to send fixes back to and would just silently mutate files, run the rest of the
+      pipeline against the mutated version, then discard the result. The workflow calls `eslint`
+      directly instead, without `--fix`.
+    - **Real, non-obvious bug hit while building this**: `eslint --fix`, run locally to check for
+      errors, was itself deleting a type-narrowing fix as fast as it was applied. Root cause:
+      `@typescript-eslint/no-unnecessary-type-assertion` has an autofixer, and it (incorrectly, in
+      this case) judged an `as {...}` cast on a `jest.requireMock()` result as "unnecessary" and
+      stripped it — even though the cast was narrowing `any` to a real type. **Fix: use a type
+      *annotation* on the variable declaration (`const x: T = expr`) instead of an `as`
+      *assertion*** (`expr as T`) — both give the variable the same resulting type, but only the
+      assertion form is something this rule inspects, so the annotation form is immune to it. More
+      generally: don't trust `eslint --fix`'s output as verification of anything — it mutates before
+      you've seen whether the mutation is correct. Use plain `eslint` (no `--fix`) to check.
+    - **Fixed four pre-existing lint errors** that would have made this pipeline red on its first
+      run, unrelated to CI itself: an unused `Prisma` type import in `fit-analysis.service.ts`; the
+      untyped-mock issue above in `fit-analysis.service.spec.ts` (also switched to real `import type`
+      declarations from `'ai'` instead of a hand-written duplicate shape, so the mock's type can't
+      silently drift from the real SDK's); an unhandled `bootstrap()` promise rejection in `main.ts`
+      (now `.catch()`s and exits with a logged error instead of an unhandled rejection); and a
+      `react-hooks/set-state-in-effect` warning in `apps/web`'s `ThemeToggle.tsx` — see
+      `apps/web/PROGRESS.md` for that one.
+    - **`actions/checkout`/`actions/setup-node` pinned to `@v7`**, not `@v4`. GitHub is retiring
+      Node 20 from Actions runners (default became Node 24 on 2026-06-16, Node 20 removed entirely
+      2026-09-16); `@v4` of both actions still declares `using: node20` in its manifest, which the
+      runner currently forces onto Node 24 anyway with a deprecation warning. `@v7` declares
+      `node24` directly, so no forcing, no warning, and no cliff to fall off in September.
+
+## Gotchas hit on this machine (Windows)
+
+- **Docker Desktop engine returns `500 Internal Server Error` on basic calls** (`docker version`,
+  `docker info`) even though `wsl -l -v` shows the `docker-desktop` distro as `Running` — happened
+  again shortly after a full reinstall had already fixed it once. This is a **recurring, open bug
+  class in Docker Desktop for Windows** (many reports across versions on `docker/for-win`'s issue
+  tracker, no single official root cause), not something specific to a broken install — so a
+  reinstall fixes the *symptom* at that moment but doesn't prevent the *trigger* from happening
+  again. Likely triggers: the Windows machine sleeping/hibernating while the WSL2 VM was running,
+  a Windows Update landing mid-session, Docker Desktop auto-updating itself without a clean VM
+  restart, or just closing the app window (which often only hides it) instead of quitting from the
+  tray icon, leaving a stale backend process behind for the next launch to inherit.
+  **Escalation ladder — try these before reinstalling, cheapest first:**
+  1. Quit Docker Desktop fully from the system tray icon (not just closing the window), wait ~10s,
+     relaunch, wait for the whale icon to stop animating.
+  2. `wsl --shutdown` (stops *every* WSL2 distro, not just Docker's — check `wsl -l -v` first if
+     other WSL work might be running), then relaunch Docker Desktop to boot a fresh VM.
+  3. Docker Desktop's Troubleshoot panel → "Clean / Purge data," then "Reset to factory defaults"
+     if that's not enough.
+  4. Full uninstall/reinstall — last resort, not a routine fix.
+
 ## What's next
 
 - Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
@@ -354,5 +414,4 @@ is already running. You still need Docker Desktop itself open first — that par
 - Terraform for AWS (RDS with pgvector, ECR, ECS Fargate, Secrets Manager) — requires an AWS account
   with credentials configured locally, and creates real, billed resources; pausing here for that
   confirmation before writing/applying any of it.
-- GitHub Actions CI/CD (build/push image, run Terraform).
 - MCP server exposing this same data as agent-callable tools.
