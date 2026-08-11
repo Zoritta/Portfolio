@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
+
+// There's nothing to subscribe to (mount state never changes after it flips once), so this
+// is a no-op. useSyncExternalStore still gives us the "true on client, false during server
+// render" behavior we need for hydration-safe mount detection, without calling setState
+// inside an effect (which the react-hooks lint rule flags as a cascading-render smell).
+const subscribe = () => () => {};
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
 
   if (!mounted) {
     return <div className="h-9 w-9" aria-hidden="true" />;

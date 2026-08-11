@@ -1,11 +1,18 @@
-import { Injectable, InternalServerErrorException, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateObject, APICallError, type LanguageModel } from 'ai';
 import { APIError } from 'openai';
-import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { EmbeddingsService, type SimilarEmbedding } from '../embeddings/embeddings.service';
+import {
+  EmbeddingsService,
+  type SimilarEmbedding,
+} from '../embeddings/embeddings.service';
 import { fitReportSchema, type FitReport } from './schemas/fit-report.schema';
 
 const GENERATION_MODEL = 'gpt-4o-mini';
@@ -37,15 +44,23 @@ export class FitAnalysisService {
   private getModel(): LanguageModel {
     const apiKey = this.config.get<string>('OPENAI_API_KEY');
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not set. Add it to apps/api/.env before running fit analysis.');
+      throw new Error(
+        'OPENAI_API_KEY is not set. Add it to apps/api/.env before running fit analysis.',
+      );
     }
     const provider = createOpenAI({ apiKey });
     return provider(GENERATION_MODEL);
   }
 
-  private buildPrompt(jobDescription: string, sources: SimilarEmbedding[]): string {
+  private buildPrompt(
+    jobDescription: string,
+    sources: SimilarEmbedding[],
+  ): string {
     const sourceList = sources
-      .map((source, index) => `[${index}] (${source.sourceType}) ${source.content}`)
+      .map(
+        (source, index) =>
+          `[${index}] (${source.sourceType}) ${source.content}`,
+      )
       .join('\n\n');
 
     return [
@@ -68,7 +83,10 @@ export class FitAnalysisService {
   private async generateReport(jobDescription: string): Promise<FitReport> {
     try {
       const queryEmbedding = await this.embeddings.embedText(jobDescription);
-      const sources = await this.embeddings.findSimilar(queryEmbedding, RETRIEVAL_TOP_K);
+      const sources = await this.embeddings.findSimilar(
+        queryEmbedding,
+        RETRIEVAL_TOP_K,
+      );
 
       const { object: report } = await generateObject({
         model: this.getModel(),
@@ -79,11 +97,15 @@ export class FitAnalysisService {
 
       return report;
     } catch (error) {
-      this.logger.error('Fit report generation failed', error instanceof Error ? error.stack : error);
+      this.logger.error(
+        'Fit report generation failed',
+        error instanceof Error ? error.stack : error,
+      );
 
       const isRetryable =
         (error instanceof APICallError && error.isRetryable) ||
-        (error instanceof APIError && (error.status === 429 || (error.status ?? 0) >= 500));
+        (error instanceof APIError &&
+          (error.status === 429 || (error.status ?? 0) >= 500));
 
       if (isRetryable) {
         throw new ServiceUnavailableException(
@@ -91,23 +113,31 @@ export class FitAnalysisService {
         );
       }
 
-      throw new InternalServerErrorException('Something went wrong analyzing this job description.');
+      throw new InternalServerErrorException(
+        'Something went wrong analyzing this job description.',
+      );
     }
   }
 
-  private async logRequest(jobDescription: string, report: FitReport): Promise<void> {
+  private async logRequest(
+    jobDescription: string,
+    report: FitReport,
+  ): Promise<void> {
     try {
       await this.prisma.fitRequest.create({
         data: {
           jobDescription,
           matchScore: report.matchScore,
-          result: report as unknown as Prisma.InputJsonValue,
+          result: report,
         },
       });
     } catch (error) {
       // Logging the request is bookkeeping, not the user-facing feature — the visitor already has
       // their report. Don't fail the request just because this write failed; log and move on.
-      this.logger.error('Failed to log FitRequest', error instanceof Error ? error.stack : error);
+      this.logger.error(
+        'Failed to log FitRequest',
+        error instanceof Error ? error.stack : error,
+      );
     }
   }
 }

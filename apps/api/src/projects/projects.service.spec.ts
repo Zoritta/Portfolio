@@ -17,7 +17,10 @@ describe('ProjectsService', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ProjectsService, { provide: PrismaService, useValue: prismaMock }],
+      providers: [
+        ProjectsService,
+        { provide: PrismaService, useValue: prismaMock },
+      ],
     }).compile();
 
     service = module.get(ProjectsService);
@@ -45,13 +48,17 @@ describe('ProjectsService', () => {
       const result = await service.findOne('1');
 
       expect(result).toBe(project);
-      expect(prismaMock.project.findUnique).toHaveBeenCalledWith({ where: { id: '1' } });
+      expect(prismaMock.project.findUnique).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
     });
 
     it('throws NotFoundException when the project does not exist', async () => {
       prismaMock.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

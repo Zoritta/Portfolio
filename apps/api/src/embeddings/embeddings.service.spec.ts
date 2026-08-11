@@ -39,7 +39,9 @@ describe('EmbeddingsService', () => {
     it('throws when OPENAI_API_KEY is not configured', async () => {
       configMock.get.mockReturnValue(undefined);
 
-      await expect(service.embedText('hello')).rejects.toThrow('OPENAI_API_KEY is not set');
+      await expect(service.embedText('hello')).rejects.toThrow(
+        'OPENAI_API_KEY is not set',
+      );
       expect(createMock).not.toHaveBeenCalled();
     });
 
@@ -62,14 +64,19 @@ describe('EmbeddingsService', () => {
 
       await service.upsert('skill', 'skill-1', 'TypeScript');
 
-      expect(createMock).toHaveBeenCalledWith({ model: 'text-embedding-3-small', input: 'TypeScript' });
+      expect(createMock).toHaveBeenCalledWith({
+        model: 'text-embedding-3-small',
+        input: 'TypeScript',
+      });
       expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('findSimilar', () => {
     it('returns the rows from the raw cosine-distance query', async () => {
-      const rows = [{ sourceType: 'skill', sourceId: '1', content: 'React', distance: 0.1 }];
+      const rows = [
+        { sourceType: 'skill', sourceId: '1', content: 'React', distance: 0.1 },
+      ];
       prismaMock.$queryRaw.mockResolvedValue(rows);
 
       const result = await service.findSimilar([0.1, 0.2], 5);

@@ -17,7 +17,10 @@ describe('ExperienceService', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ExperienceService, { provide: PrismaService, useValue: prismaMock }],
+      providers: [
+        ExperienceService,
+        { provide: PrismaService, useValue: prismaMock },
+      ],
     }).compile();
 
     service = module.get(ExperienceService);
@@ -45,13 +48,17 @@ describe('ExperienceService', () => {
       const result = await service.findOne('1');
 
       expect(result).toBe(experience);
-      expect(prismaMock.experience.findUnique).toHaveBeenCalledWith({ where: { id: '1' } });
+      expect(prismaMock.experience.findUnique).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
     });
 
     it('throws NotFoundException when the experience does not exist', async () => {
       prismaMock.experience.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

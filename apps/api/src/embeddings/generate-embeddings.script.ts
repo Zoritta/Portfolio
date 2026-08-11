@@ -19,7 +19,9 @@ function skillContent(skill: Skill): string {
 
 function experienceContent(experience: Experience): string {
   const start = experience.startDate.toISOString().slice(0, 7);
-  const end = experience.endDate ? experience.endDate.toISOString().slice(0, 7) : 'present';
+  const end = experience.endDate
+    ? experience.endDate.toISOString().slice(0, 7)
+    : 'present';
   return `${experience.role} at ${experience.company} (${start} to ${end})\n${experience.description}`;
 }
 
@@ -47,8 +49,14 @@ async function main() {
   }
 
   for (const experience of experiences) {
-    await embeddings.upsert('experience', experience.id, experienceContent(experience));
-    console.log(`embedded experience: ${experience.role} at ${experience.company}`);
+    await embeddings.upsert(
+      'experience',
+      experience.id,
+      experienceContent(experience),
+    );
+    console.log(
+      `embedded experience: ${experience.role} at ${experience.company}`,
+    );
   }
 
   console.log(

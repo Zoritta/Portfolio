@@ -17,7 +17,10 @@ describe('SkillsService', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SkillsService, { provide: PrismaService, useValue: prismaMock }],
+      providers: [
+        SkillsService,
+        { provide: PrismaService, useValue: prismaMock },
+      ],
     }).compile();
 
     service = module.get(SkillsService);
@@ -45,13 +48,17 @@ describe('SkillsService', () => {
       const result = await service.findOne('1');
 
       expect(result).toBe(skill);
-      expect(prismaMock.skill.findUnique).toHaveBeenCalledWith({ where: { id: '1' } });
+      expect(prismaMock.skill.findUnique).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
     });
 
     it('throws NotFoundException when the skill does not exist', async () => {
       prismaMock.skill.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

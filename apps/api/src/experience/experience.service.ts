@@ -10,7 +10,9 @@ export class ExperienceService {
   }
 
   async findOne(id: string) {
-    const experience = await this.prisma.experience.findUnique({ where: { id } });
+    const experience = await this.prisma.experience.findUnique({
+      where: { id },
+    });
     if (!experience) {
       throw new NotFoundException(`Experience ${id} not found`);
     }

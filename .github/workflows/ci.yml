@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api:
+    name: API (lint, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm ci at the repo root: this is an npm workspaces monorepo, so apps/api's
+      # dependencies are locked in the root package-lock.json, not a local one.
+      - run: npm ci
+
+      # Generates the Prisma client's TypeScript types from schema.prisma. Required before
+      # lint/test/build on a fresh runner, since our code imports generated types
+      # (e.g. Prisma.InputJsonValue) that don't exist until this has run once.
+      - run: npm exec --workspace=apps/api -- prisma generate
+
+      # Not npm run lint:api: that script has --fix baked in for local dev convenience. CI can't
+      # commit fixes back, so it should only ever report problems, never mutate files.
+      - run: npm exec --workspace=apps/api -- eslint "{src,apps,libs,test}/**/*.ts"
+      - run: npm run test:api
+      - run: npm run build:api
+
+  web:
+    name: Web (lint, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint:web
+      - run: npm run test:web
+      - run: npm run build:web
+
+  docker:
+    name: Docker build (api)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Proves the image documented in apps/api/Dockerfile still builds cleanly. No push to a
+      # registry yet — that starts once Phase 4/5 gives us somewhere real to push it to.
+      - run: docker build -f apps/api/Dockerfile -t portfolio-api .

@@ -1,10 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmbeddingsService } from '../embeddings/embeddings.service';
 import { FitAnalysisService } from './fit-analysis.service';
 import type { FitReport } from './schemas/fit-report.schema';
+import type {
+  generateObject as GenerateObjectFn,
+  APICallError as ApiCallErrorClass,
+} from 'ai';
 
 // `ai` and `@ai-sdk/openai` ship ESM-only, which Jest's default CJS transform can't parse.
 // Mocking them outright (no jest.requireActual) avoids ever loading the real files.
@@ -28,11 +35,14 @@ jest.mock('@ai-sdk/openai', () => ({
   createOpenAI: jest.fn(() => jest.fn()),
 }));
 
-const { generateObject: generateObjectMockFn, APICallError } = jest.requireMock('ai') as {
-  generateObject: jest.Mock;
-  APICallError: typeof MockAPICallError;
-};
-const generateObjectMock = generateObjectMockFn;
+// jest.requireMock() returns `any` by default. Giving `aiMock` an explicit declared type (tied
+// to the real 'ai' types via the type-only import above) makes everything destructured from it
+// fully typed, without using an `as` assertion — a type annotation, not an assertion.
+const aiMock: {
+  generateObject: jest.MockedFunction<typeof GenerateObjectFn>;
+  APICallError: typeof ApiCallErrorClass;
+} = jest.requireMock('ai');
+const { generateObject: generateObjectMock, APICallError } = aiMock;
 
 describe('FitAnalysisService', () => {
   let service: FitAnalysisService;
@@ -52,7 +62,9 @@ describe('FitAnalysisService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     embeddingsMock.embedText.mockResolvedValue([0.1, 0.2]);
-    embeddingsMock.findSimilar.mockResolvedValue([{ sourceType: 'skill', sourceId: '1', content: 'React', distance: 0.1 }]);
+    embeddingsMock.findSimilar.mockResolvedValue([
+      { sourceType: 'skill', sourceId: '1', content: 'React', distance: 0.1 },
+    ]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -73,20 +85,32 @@ describe('FitAnalysisService', () => {
 
     expect(result).toEqual(report);
     expect(prismaMock.fitRequest.create).toHaveBeenCalledWith({
-      data: { jobDescription: 'a'.repeat(60), matchScore: report.matchScore, result: report },
+      data: {
+        jobDescription: 'a'.repeat(60),
+        matchScore: report.matchScore,
+        result: report,
+      },
     });
   });
 
   it('maps a retryable AI provider error to ServiceUnavailableException', async () => {
-    generateObjectMock.mockRejectedValue(new APICallError({ message: 'rate limited', isRetryable: true }));
+    generateObjectMock.mockRejectedValue(
+      new APICallError({ message: 'rate limited', isRetryable: true }),
+    );
 
-    await expect(service.analyze('a'.repeat(60))).rejects.toThrow(ServiceUnavailableException);
+    await expect(service.analyze('a'.repeat(60))).rejects.toThrow(
+      ServiceUnavailableException,
+    );
   });
 
   it('maps an unexpected error to InternalServerErrorException', async () => {
-    generateObjectMock.mockRejectedValue(new Error('something unrelated broke'));
+    generateObjectMock.mockRejectedValue(
+      new Error('something unrelated broke'),
+    );
 
-    await expect(service.analyze('a'.repeat(60))).rejects.toThrow(InternalServerErrorException);
+    await expect(service.analyze('a'.repeat(60))).rejects.toThrow(
+      InternalServerErrorException,
+    );
   });
 
   it('still returns the report even if logging the FitRequest fails', async () => {

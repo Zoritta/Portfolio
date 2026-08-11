@@ -26,7 +26,9 @@ export class EmbeddingsService {
     if (!this.openai) {
       const apiKey = this.config.get<string>('OPENAI_API_KEY');
       if (!apiKey) {
-        throw new Error('OPENAI_API_KEY is not set. Add it to apps/api/.env before generating embeddings.');
+        throw new Error(
+          'OPENAI_API_KEY is not set. Add it to apps/api/.env before generating embeddings.',
+        );
       }
       this.openai = new OpenAI({ apiKey });
     }
@@ -41,7 +43,11 @@ export class EmbeddingsService {
     return response.data[0].embedding;
   }
 
-  async upsert(sourceType: string, sourceId: string, content: string): Promise<void> {
+  async upsert(
+    sourceType: string,
+    sourceId: string,
+    content: string,
+  ): Promise<void> {
     const embedding = await this.embedText(content);
     const vectorLiteral = `[${embedding.join(',')}]`;
 
@@ -54,7 +60,10 @@ export class EmbeddingsService {
   }
 
   /** Returns the `limit` Embedding rows whose vectors are closest (cosine distance) to `queryEmbedding`. */
-  async findSimilar(queryEmbedding: number[], limit: number): Promise<SimilarEmbedding[]> {
+  async findSimilar(
+    queryEmbedding: number[],
+    limit: number,
+  ): Promise<SimilarEmbedding[]> {
     const vectorLiteral = `[${queryEmbedding.join(',')}]`;
 
     return this.prisma.$queryRaw<SimilarEmbedding[]>`
