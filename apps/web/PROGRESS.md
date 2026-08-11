@@ -165,6 +165,21 @@ npm test          # run component tests once
 npm run test:watch
 ```
 
+10. **`ThemeToggle` fixed for a newer `react-hooks` lint rule.** Surfaced while setting up CI
+    (see `apps/api/PROGRESS.md` item 17) — `useEffect(() => setMounted(true), [])` trips
+    `react-hooks/set-state-in-effect`, which flags calling `setState` synchronously inside an
+    effect body (it causes an extra cascading render). Replaced with `useSyncExternalStore`:
+    ```ts
+    const subscribe = () => () => {};
+    const mounted = useSyncExternalStore(subscribe, () => true, () => false);
+    ```
+    `subscribe` is a no-op (there's nothing to subscribe to — this value only ever flips once),
+    `() => true` is the snapshot used once running in the browser, `() => false` is the snapshot
+    used during server rendering. This gives the same "false during SSR, true after hydration"
+    behavior the effect+state version had (needed so `resolvedTheme` — unknown on the server — never
+    causes a hydration mismatch), without an effect or a `setState` call at all. A known idiom for
+    exactly this "mount detection" problem, not something specific to this component.
+
 ## What's next
 
 - Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running API).
