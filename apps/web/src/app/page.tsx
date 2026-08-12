@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getExperience, getProjects, getSkills, type Skill } from "@/lib/api";
 import { FitAnalyzer } from "@/components/FitAnalyzer";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -45,13 +46,23 @@ export default async function Home() {
     <main className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-16 font-sans dark:bg-black sm:px-16">
       <div className="flex w-full max-w-3xl flex-col gap-16">
         <header className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-              Zohreh Sadeghi
-            </h1>
-            <p className="mt-1 text-lg text-zinc-600 dark:text-zinc-400">
-              Fullstack Developer — Malmö, Sweden
-            </p>
+          <div className="flex items-center gap-4">
+            <Image
+              src="/profile.jpg"
+              alt="Zohreh Sadeghi"
+              width={80}
+              height={80}
+              priority
+              className="h-20 w-20 rounded-full object-cover ring-2 ring-zinc-200 dark:ring-zinc-800"
+            />
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
+                Zohreh Sadeghi
+              </h1>
+              <p className="mt-1 text-lg text-zinc-600 dark:text-zinc-400">
+                Fullstack Developer — Malmö, Sweden
+              </p>
+            </div>
           </div>
           <ThemeToggle />
         </header>
