@@ -407,11 +407,56 @@ is already running. You still need Docker Desktop itself open first — that par
      if that's not enough.
   4. Full uninstall/reinstall — last resort, not a routine fix.
 
+18. **Deployed (Phase 4 of the roadmap).** Live at `https://portfolio-iwzr.onrender.com`, built
+    from the existing Dockerfile on Render's free tier. Database is **Neon** (Postgres 16, chosen to
+    match local dev exactly), migrated (`prisma migrate deploy` — all 3 migrations, including
+    `CREATE EXTENSION IF NOT EXISTS vector;`), seeded, and embedded, all run against production from
+    a local machine by temporarily swapping `.env` ↔ `.env.production` (never by typing secrets
+    into a command — that would print them to shell history/output, a worse exposure than the file
+    swap).
+    - **`directUrl` added to `prisma/schema.prisma`'s datasource block**, alongside the existing
+      `url`. Neon gives two connection strings — pooled (PgBouncer, hostname has `-pooler`) and
+      direct. `prisma migrate deploy` needs the *direct* one (migrations rely on advisory
+      locks/prepared statements that don't work reliably through a pooler); the running app uses
+      the *pooled* one at request time, since Render can open many short-lived connections without
+      exhausting Neon's connection limit. Local dev's `.env`/`.env.example` got a matching
+      `DIRECT_URL`, identical to `DATABASE_URL` there since there's no pooler locally.
+    - **Neon over Supabase**: both support pgvector fully, but Supabase fully pauses inactive
+      projects after 1 week (manual dashboard unpause needed to bring it back) while Neon
+      auto-resumes on the next request after scale-to-zero (~1s, no manual step) — the deciding
+      factor for something that needs to "just work" when a recruiter clicks a cold link.
+    - **Render free tier accepted deliberately**: 15-min-idle spin-down, 30–60s cold start on the
+      next request. Fine for sporadic portfolio traffic; the $7/mo Starter tier removes this if it's
+      ever worth it (e.g. before a live interview demo), switchable anytime with no redeploy needed.
+    - **Real bug hit and fixed**: `WEB_ORIGIN` (the CORS-allowed origin) was set on Render with a
+      trailing slash (`.../vercel.app/`), copied from how the Vercel URL happened to be pasted. A
+      browser's `Origin` header is defined by spec as scheme+host+port only — **never** a path or
+      trailing slash — so `'https://x.vercel.app' !== 'https://x.vercel.app/'` in NestJS's exact-match
+      CORS check, meaning the API silently kept rejecting the real frontend even after the "right"
+      value was saved. Fixed by removing the trailing slash. Worth remembering for any future origin
+      config: always strip trailing slashes from URLs used as CORS origins.
+    - **Also hit**: editing an env var in Render's dashboard doesn't take effect until *saved*
+      (separate button from anything deploy-related) *and* the service actually restarts —
+      redeploying an old commit doesn't matter either way, since env vars are entirely independent
+      of which commit is running. `.env.production` in this repo is never read by Render at all
+      (it's gitignored, never reaches GitHub) — it exists purely as a local reference copy of what
+      should be set in Render's dashboard, not a source Render pulls from.
+    - **Verified for real, not just "deploy succeeded"**: `curl`'d the live `/projects` endpoint and
+      confirmed real seeded data came back with `helmet`/throttler headers intact; verified CORS
+      with two `Origin` headers (real domain vs. an untrusted one) to confirm the config
+      *restricts*, not just permits; a human click-through on the live Vercel URL confirmed the
+      Job Fit Analyzer works end-to-end in a real browser, not just via `curl`.
+    - **Key rotation deliberately deferred**: the Neon password and OpenAI key passed through this
+      session's file-change tracking while setting up `.env.production`. Decided to rotate once at
+      the end of the project rather than mid-flight, given limited OpenAI credit budget and more
+      config changes still coming — not an oversight.
+
 ## What's next
 
 - Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
   `ai` SDK version, still functional).
 - Terraform for AWS (RDS with pgvector, ECR, ECS Fargate, Secrets Manager) — requires an AWS account
-  with credentials configured locally, and creates real, billed resources; pausing here for that
-  confirmation before writing/applying any of it.
+  with credentials configured locally, and creates real, billed resources. Confirmed and starting
+  next.
 - MCP server exposing this same data as agent-callable tools.
+- Rotate the Neon DB password and OpenAI API key (deferred to end of project, see above).

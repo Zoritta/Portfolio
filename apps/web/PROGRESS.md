@@ -182,8 +182,22 @@ npm run test:watch
 
 ## What's next
 
+11. **Deployed to Vercel (Phase 4 of the roadmap).** Live at
+    `https://portfolio-web-iota-self.vercel.app`. Root Directory set to `apps/web` in Vercel's
+    project settings — required for a monorepo, since Vercel scans the whole repo by default and
+    needs to be told which app to build. Vercel auto-detects the root `package.json`'s npm
+    `workspaces` field and still installs from the true repo root even with Root Directory scoped
+    down, so no custom install/build command was needed — the plain `next build` script Just Worked.
+    - `API_URL` and `NEXT_PUBLIC_API_URL` both set to the live Render API URL
+      (`https://portfolio-iwzr.onrender.com`) as Vercel env vars.
+    - **Verified for real**: `curl`'d the deployed homepage and confirmed real seeded content
+      (project titles, name) came back rather than the `page.tsx` fallback message for an
+      unreachable API; a human click-through confirmed the Job Fit Analyzer works end-to-end
+      against the live Render API from a real browser (see `apps/api/PROGRESS.md` item 18 for the
+      CORS trailing-slash bug that had to be fixed first, and how it was found).
+
+## What's next
+
 - Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running API).
-- Deploy to Vercel; wire up environment variables for the AWS-hosted API URL (both `API_URL` and
-  `NEXT_PUBLIC_API_URL` will need to point at the deployed backend).
 - `npm audit` flagged 3 high-severity issues in `next`'s own transitive deps (`postcss`, `sharp`) —
   pre-existing, unrelated to anything built here. Worth a dedicated look, not fixed yet.
