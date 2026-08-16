@@ -1,0 +1,10 @@
+# Copy this to terraform.tfvars (gitignored) and fill in the real value.
+# Never commit terraform.tfvars, never paste its contents into chat.
+
+aws_region   = "eu-north-1"
+project_name = "portfolio"
+db_name      = "portfolio"
+db_username  = "portfolio_admin"
+web_origin   = "https://portfolio-web-iota-self.vercel.app"
+
+openai_api_key = "sk-REPLACE-ME"
