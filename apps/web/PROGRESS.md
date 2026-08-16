@@ -196,6 +196,17 @@ npm run test:watch
       against the live Render API from a real browser (see `apps/api/PROGRESS.md` item 18 for the
       CORS trailing-slash bug that had to be fixed first, and how it was found).
 
+12. **Temporarily pointed at the AWS backend (Phase 5 verification, 2026-08-16).** To prove the
+    Terraform-provisioned AWS stack (see `apps/api/PROGRESS.md` item 19 and `terraform/README.md`)
+    actually worked end-to-end rather than just in isolation, `API_URL`/`NEXT_PUBLIC_API_URL` were
+    temporarily switched to the ALB's URL in Vercel, redeployed, verified with real data, then
+    switched back to Render and redeployed again. **Worked without any CORS change on the AWS
+    side**, because `WEB_ORIGIN` in the AWS task definition was already set to this exact Vercel
+    domain from the start — this is the same CORS mechanism as the Render deployment, just pointed
+    at a different backend temporarily. Confirmed reverted correctly afterward by curling the live
+    site again post-`terraform destroy`: since AWS no longer exists, real data still rendering
+    proves the swap back to Render actually took effect, not just that the env var was edited.
+
 ## What's next
 
 - Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running API).

@@ -451,12 +451,75 @@ is already running. You still need Docker Desktop itself open first — that par
       the end of the project rather than mid-flight, given limited OpenAI credit budget and more
       config changes still coming — not an oversight.
 
+19. **Terraform + AWS (Phase 5) — built, proven working end-to-end, then torn down.** Full stack
+    lives in `terraform/`, not under either app, since it's infrastructure for the whole project,
+    not app code. Deliberately **not** an always-on deployment — see `terraform/README.md` for the
+    actual up/down runbook; this entry is the build log and what got learned.
+    - **Architecture**: `internet → ALB → ECS Fargate → RDS Postgres`, plus ECR (image registry),
+      Secrets Manager (`DATABASE_URL`/`OPENAI_API_KEY`, never plaintext in the task definition),
+      and an IAM execution role scoped to exactly those two secrets by ARN — real least-privilege,
+      not just the word used in a CV bullet.
+    - **No NAT Gateway, on purpose**: RDS and Fargate sit in *public* subnets instead, with
+      security groups doing the actual access control (ALB open to the internet; ECS reachable
+      only from the ALB; RDS reachable only from ECS). Fargate keeps a public IP not to be
+      reachable from outside — its security group blocks that — but because a resource in a
+      public subnet needs one to get outbound internet access at all (ECR pulls, OpenAI calls,
+      Secrets Manager reads) without paying for a NAT Gateway (~$32/mo continuously) neither this
+      project's traffic nor its budget justifies.
+    - **The ALB was a deliberate scope addition** partway through design, not part of the original
+      plan — upgraded from "Fargate task with a public IP as the entry point" to a real load
+      balancer for a more production-realistic HTTP front door, while keeping the no-NAT-Gateway
+      constraint. Cost impact is proportional to uptime (~$0.0225/hr), which is fine given the
+      spin-up/spin-down usage pattern.
+    - **Real, non-obvious bugs hit and fixed**:
+      - AWS security group rule `description` fields reject apostrophes (a restricted character
+        set, not free text) — caught by `terraform validate`, not by AWS at apply time.
+      - Piping `aws ecr get-login-password` into `docker login --password-stdin` through
+        PowerShell's pipeline corrupts the token (object-stream reformatting, not a plain byte
+        pipe) — fixed by running it through Bash instead, where pipes behave like a normal POSIX
+        shell.
+      - `terraform apply` created `aws_ecs_service.api` **before** RDS finished provisioning,
+        because nothing in the task definition actually references RDS (only the DB secret's ARN,
+        which existed from the start) — Terraform only waits on dependencies you actually write,
+        not on what the *application* logically needs. The real blocker turned out to be simpler
+        anyway: no image had been pushed to ECR yet.
+      - The Internet Gateway routinely takes 5-8 minutes to destroy even after everything else is
+        gone, because ALB-managed network interfaces can outlive the ALB resource itself reporting
+        as deleted, and the IGW can't detach until every ENI in the VPC clears. Not a bug, a real
+        AWS backend delay — confirmed by just letting it finish rather than assuming something was
+        stuck.
+      - RDS's security group (correctly) blocks everything except ECS, which also blocks running
+        migrations from a laptop. Solved by adding a temporary, clearly-commented
+        `aws_security_group_rule` for the local machine's IP **as Terraform code**, applying it,
+        using it, then removing it from the code and applying again — specifically to avoid the
+        drift that a manual AWS Console change would have caused (Terraform state and real AWS
+        infrastructure staying in sync is the entire point of IaC; an out-of-band click breaks
+        that guarantee silently).
+    - **Two real OpenAI key incidents during this phase**: a self-inflicted one (`2>&1` on a
+      PowerShell native-command call printed a raw key into tool output when `terraform.tfvars`
+      had a syntax error — `2>&1` should generally be avoided for native executables in
+      PowerShell, which is documented tool guidance, not just a one-off mistake), and a real one
+      (OpenAI's own automated leak-detection disabled a key directly, unprompted). Git history and
+      CI logs were both checked and are clean, so the likely channel is repeated exposure of
+      secrets through file-diff-tracking while editing `.env`-style files with them open in an
+      editor — not something fully provable, but the one concrete pattern with actual evidence
+      behind it. Standing practice now: close secret-bearing files once done editing them, and
+      rotation across all three places a key lives (local `.env`, Neon's `.env.production`, AWS's
+      `terraform.tfvars`) is manual and independent — nothing links them automatically.
+    - **Verified for real, twice over**: after `apply`, curled the live ALB endpoint directly and
+      also pointed the actual live Vercel frontend at it temporarily to prove the full real
+      request path, not just the API in isolation. After `destroy`, didn't just trust Terraform's
+      own "Destroy complete" message — independently queried AWS directly (`describe-db-instances`,
+      `list-clusters`, `describe-load-balancers`) to confirm zero billed resources were left
+      running.
+
 ## What's next
 
 - Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
   `ai` SDK version, still functional).
-- Terraform for AWS (RDS with pgvector, ECR, ECS Fargate, Secrets Manager) — requires an AWS account
-  with credentials configured locally, and creates real, billed resources. Confirmed and starting
-  next.
 - MCP server exposing this same data as agent-callable tools.
+- `npm audit` issues in `apps/web` (pre-existing, not yet investigated).
+- Playwright e2e tests.
+- Rotate all OpenAI/Neon credentials once, at the end of the project (deliberately deferred, see
+  above).
 - Rotate the Neon DB password and OpenAI API key (deferred to end of project, see above).
