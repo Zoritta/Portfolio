@@ -10,6 +10,7 @@ import { SkillsModule } from './skills/skills.module';
 import { ExperienceModule } from './experience/experience.module';
 import { EmbeddingsModule } from './embeddings/embeddings.module';
 import { FitAnalysisModule } from './fit-analysis/fit-analysis.module';
+import { ContactModule } from './contact/contact.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { FitAnalysisModule } from './fit-analysis/fit-analysis.module';
     ExperienceModule,
     EmbeddingsModule,
     FitAnalysisModule,
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

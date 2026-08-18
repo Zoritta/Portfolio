@@ -65,6 +65,46 @@ export class FitAnalysisError extends Error {
   }
 }
 
+export class ContactError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ContactError';
+  }
+}
+
+export type ContactPayload = {
+  name: string;
+  email: string;
+  message: string;
+  honeypot?: string;
+};
+
+export async function sendContactMessage(payload: ContactPayload): Promise<{ success: true }> {
+  const response = await fetch(`${PUBLIC_API_URL}/contact`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 429) {
+    throw new ContactError('Too many requests — please wait a minute and try again.', 429);
+  }
+  if (response.status === 400) {
+    throw new ContactError('Please check your name, email, and message and try again.', 400);
+  }
+  if (response.status === 503) {
+    throw new ContactError('Message sending is temporarily unavailable. Please try again in a moment.', 503);
+  }
+  if (!response.ok) {
+    throw new ContactError('Something went wrong on our end — please try again shortly.', response.status);
+  }
+
+  return response.json();
+}
+
 export async function analyzeJobFit(jobDescription: string): Promise<FitReport> {
   const response = await fetch(`${PUBLIC_API_URL}/fit-analysis`, {
     method: 'POST',

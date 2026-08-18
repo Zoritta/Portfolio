@@ -6,6 +6,7 @@ import { ScrollReveal } from "@/components/ScrollReveal";
 import { Projects } from "@/components/Projects";
 import { Experience } from "@/components/Experience";
 import { Skills } from "@/components/Skills";
+import { ContactForm } from "@/components/ContactForm";
 
 export default async function Home() {
   let projects, skills, experience;
@@ -42,6 +43,9 @@ export default async function Home() {
           </ScrollReveal>
           <ScrollReveal>
             <Skills skills={skills} />
+          </ScrollReveal>
+          <ScrollReveal>
+            <ContactForm />
           </ScrollReveal>
         </div>
       </main>
