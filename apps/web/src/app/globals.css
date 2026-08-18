@@ -5,6 +5,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --glow-color: rgba(0, 0, 0, 0.06);
   color-scheme: light;
 }
 
@@ -18,6 +19,7 @@
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --glow-color: rgba(255, 255, 255, 0.08);
   color-scheme: dark;
 }
 
