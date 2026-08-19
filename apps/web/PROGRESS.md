@@ -271,5 +271,11 @@ npm run test:watch
   pre-existing, unrelated to anything built here. Worth a dedicated look, not fixed yet.
 - Real LinkedIn/GitHub profile URLs for the `Person` JSON-LD's `sameAs` field (left empty — not
   guessed).
-- Confirm `zohrehsadeghi.se` DNS actually points at the Vercel deployment; until then, `metadataBase`
-  and the sitemap/OG URLs reference a domain that isn't serving the site yet.
+- ~~Confirm `zohrehsadeghi.se` DNS actually points at the Vercel deployment~~ — **verified live,
+  2026-08-19**: DNS resolves to Vercel, `curl`'d real page content (not a placeholder) at `HTTP 200`.
+  One nuance found while checking: the bare `zohrehsadeghi.se` root domain `308`-redirects to
+  `https://www.zohrehsadeghi.se/` (normal Vercel behavior when `www` is set as the primary domain).
+  `SITE_URL`/`metadataBase` in `layout.tsx`/`sitemap.ts`/`robots.ts` are currently set to the bare
+  apex domain (no `www`), which crawlers will follow through the redirect fine, but isn't the exact
+  final URL. Not broken, just imprecise — worth pointing `SITE_URL` at the `www` version for a
+  fully accurate canonical URL, next time these files are touched.
