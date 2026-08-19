@@ -407,6 +407,17 @@ is already running. You still need Docker Desktop itself open first — that par
      if that's not enough.
   4. Full uninstall/reinstall — last resort, not a routine fix.
 
+- **`prisma generate` fails with `EPERM: operation not permitted, rename ... query_engine-windows.dll.node`**
+  whenever a running Node process (any `nest start --watch` dev server, or a `node dist/src/main`
+  instance) still has the previous generated client's `.dll` loaded in memory — Windows won't let you
+  overwrite a file that's memory-mapped by a live process, unlike Linux/macOS. Retrying `prisma
+  generate` doesn't fix it on its own; the only real fix is stopping whatever process is holding the
+  handle (there's no lightweight built-in way to see *which* process holds a given file handle without
+  Sysinternals' `handle.exe`, which isn't installed here — in practice, checking `Get-CimInstance
+  Win32_Process -Filter "Name = 'node.exe'"` for anything with `nest`/`dist/src/main` in its command
+  line and stopping those is the practical substitute). Safe to do — the dev server just needs a
+  manual restart afterward to pick up the newly generated client.
+
 18. **Deployed (Phase 4 of the roadmap).** Live at `https://portfolio-iwzr.onrender.com`, built
     from the existing Dockerfile on Render's free tier. Database is **Neon** (Postgres 16, chosen to
     match local dev exactly), migrated (`prisma migrate deploy` — all 3 migrations, including
@@ -513,6 +524,37 @@ is already running. You still need Docker Desktop itself open first — that par
       `list-clusters`, `describe-load-balancers`) to confirm zero billed resources were left
       running.
 
+20. **Contact form backend (part of the standalone UI/UX pass, 2026-08-18/19 — frontend half is
+    `apps/web/PROGRESS.md` #13).** New `src/contact/` module, deliberately structured identically to
+    `fit-analysis/` (DTO → `ZodValidationPipe` → controller → service) rather than inventing a new
+    shape for the second feature module in this codebase.
+    - New `ContactMessage` Prisma model (`id`, `name`, `email`, `message`, `createdAt`), migration
+      `20260818143657_add_contact_message`.
+    - `dto/send-message.dto.ts` — Zod schema (name 2–100 chars, valid email, message 10–5000 chars)
+      plus an optional `honeypot` field (defaults to `''`). A filled honeypot still returns
+      `{ success: true }` — the point is a bot never learns it was caught, so it doesn't go looking
+      for a different way in.
+    - `contact.service.ts` sends via **Resend** (`emails.send`, lazy-constructed client, same pattern
+      as `EmbeddingsService`/`FitAnalysisService`'s lazy OpenAI clients), `replyTo` set to the
+      visitor's own email so replying from Gmail works normally, best-effort logs to
+      `ContactMessage` in a try/catch that never fails the user-facing request (identical reasoning
+      to `FitAnalysisService.logRequest`). Any Resend failure maps to a `503
+      ServiceUnavailableException` — simpler than `fit-analysis`'s retryable/non-retryable split,
+      since Resend's SDK doesn't expose that distinction the way OpenAI's does.
+    - `contact.controller.ts` — `POST /contact`, throttled to 3/min (tighter than `fit-analysis`'s
+      5/min, since this is a public write endpoint with spam risk rather than a paid-API-cost risk).
+    - Uses Resend's shared sandbox `from` address (`onboarding@resend.dev`) rather than a verified
+      custom domain — deliberately fine here, since that sandbox domain can only deliver to the
+      Resend account's own registered email, and `CONTACT_TO_EMAIL` is that same address by design.
+    - Full spec coverage mirroring `fit-analysis`'s test shape: DTO validation boundaries, controller
+      delegation, and service tests (send+log success, honeypot skip, provider-failure → 503,
+      logging-failure doesn't fail the request) — 3 new suites / 10 new tests.
+    - **Verified for real, twice**: once with no `RESEND_API_KEY` set (confirmed the 503 path fires
+      correctly, honeypot returns success without sending, short messages 400, and a 4th rapid
+      request hit the throttle), then again after a real key was added (confirmed `201` +
+      `{"success":true}`, a real email arrived, and the row landed in `ContactMessage` — then deleted
+      that test row).
+
 ## What's next
 
 - Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
@@ -523,3 +565,6 @@ is already running. You still need Docker Desktop itself open first — that par
 - Rotate all OpenAI/Neon credentials once, at the end of the project (deliberately deferred, see
   above).
 - Rotate the Neon DB password and OpenAI API key (deferred to end of project, see above).
+- Consider whether the fresh Resend key (added 2026-08-19) should be rotated now rather than bundled
+  into the end-of-project rotation — it passed through this session's tooling output once, similar to
+  the earlier OpenAI/Neon incidents, but is new/cheap to redo since nothing depends on it yet.

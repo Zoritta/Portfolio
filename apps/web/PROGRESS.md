@@ -207,8 +207,69 @@ npm run test:watch
     site again post-`terraform destroy`: since AWS no longer exists, real data still rendering
     proves the swap back to Render actually took effect, not just that the env var was edited.
 
+13. **UI/UX upgrade pass (standalone effort, not a roadmap phase, 2026-08-18/19).** The homepage was
+    functionally solid but visually minimal — no nav, no motion, no SEO beyond a bare title/description,
+    no way to actually contact me. Done in six independently-verified stages rather than one big diff,
+    specifically so each change could be understood before the next one landed.
+    - **Stage 1 — deps + icons.** Installed `framer-motion`, `lucide-react`, `@vercel/analytics`.
+      Deleted the unused `create-next-app` placeholder SVGs. Replaced `ThemeToggle`'s hand-written
+      inline `<svg>` with `lucide-react`'s `Sun`/`Moon`. **Real gotcha**: planned to use a `Github`
+      icon for project "Code" links — `lucide-react` dropped brand/logo icons a while back (GitHub's
+      logo is trademarked), so there's no `Github` export at all. Used `Code2` instead, which is
+      arguably more correct anyway since it's not tied to a specific git host.
+    - **Stage 2 — structural extraction, zero visual change.** `page.tsx` (185 lines, everything
+      inline) split into `Hero.tsx`, `Nav.tsx`, `ProjectCard.tsx`/`Projects.tsx`, `Experience.tsx`,
+      `Skills.tsx`, plus a shared `EmptyState.tsx` (previously duplicated 3× inline, now a component
+      alongside `Skeleton.tsx`). Deliberately a pure reorganization with no behavior change, so any
+      later regression could be isolated to a later stage.
+    - **Stage 3 — hero + motion.** New `hooks/useRotatingText.ts` (first custom hook in this project —
+      `useState` + `setInterval` inside `useEffect`, cycling "Fullstack Developer" / "Cloud-Native
+      Engineer" / "AI/RAG Developer" under the name). `ScrollReveal.tsx` wraps sections in
+      `framer-motion`'s `whileInView` (fade + slide up on scroll into view, `once: true` so it doesn't
+      replay). `ProjectCard.tsx` got a cursor-following glow: `onMouseMove` writes `--x`/`--y` straight
+      to the DOM node's `style` (not React state, to avoid a re-render on every pixel of mouse
+      movement), read by a `radial-gradient` background using a new `--glow-color` CSS variable defined
+      per-theme in `globals.css`, matching the existing `--background`/`--foreground` pattern. `Nav`
+      became a real sticky top bar (`sticky top-0 backdrop-blur`) with anchor links — this required
+      moving it *outside* the `max-w-3xl` content column in `page.tsx`, since a sticky bar needs to
+      span full page width. Added `scroll-mt-24` to each anchored section (so the sticky bar doesn't
+      cover the target on jump) and `scroll-smooth` on `<html>`.
+    - **Stage 4 — SEO artifacts.** Expanded `layout.tsx` metadata (`metadataBase`, `openGraph`,
+      `twitter`, `robots`). `app/opengraph-image.tsx` and `app/icon.tsx` use `next/og`'s
+      `ImageResponse` (JSX/CSS subset → PNG at build time via Next's file convention) — confirmed by
+      curling a real running build that Next auto-wires a *single* `opengraph-image.tsx` into **both**
+      `og:image` and `twitter:image` meta tags (Twitter Card falls back to the OG image when no
+      separate `twitter-image` file exists), so no duplicate image file was needed. `app/sitemap.ts` /
+      `app/robots.ts` are plain data-returning functions Next turns into real `/sitemap.xml` /
+      `/robots.txt` routes. `lib/structured-data.ts` exports `Person`/`WebSite` JSON-LD objects,
+      rendered via a `<script type="application/ld+json">` added directly in a manual `<head>` inside
+      the root layout (the Metadata API has no JSON-LD convention of its own).
+    - **Stage 5b — contact form (frontend half; backend half is `apps/api/PROGRESS.md` #20).**
+      `lib/api.ts` gained `ContactError`/`sendContactMessage()`, mirroring `FitAnalysisError`/
+      `analyzeJobFit()`'s status-code branching exactly. `ContactForm.tsx` mirrors `FitAnalyzer.tsx`'s
+      `idle/loading/error/success` state machine rather than inventing a new shape. Includes a
+      CSS-hidden (not `type="hidden"` — bots specifically skip those) honeypot field matching what the
+      backend DTO expects. 3 new tests (`ContactForm.spec.tsx`), same shape as `FitAnalyzer.spec.tsx`.
+    - **Stage 6 — Vercel Analytics.** One `<Analytics />` component in `layout.tsx`; only actually
+      reports data once deployed (expected — not a bug that it's silent in local dev).
+    - **Verified at every stage, not just "it compiled"**: `tsc --noEmit` + `npm test` + `npm run lint`
+      + `npm run build` after each stage; for Stage 4, actually started the production build and
+      `curl`'d `/sitemap.xml`, `/robots.txt`, the homepage's rendered `<head>`, and the image routes
+      directly rather than trusting the build log; for Stage 5b, posted real requests at the live local
+      API (valid message, honeypot-filled, too-short message, and a 4th request that incidentally
+      proved the rate limiter works) before and after adding a real Resend key, confirming the email
+      actually sends and the `ContactMessage` row gets logged.
+    - **A recurring false alarm worth remembering**: the editor's TS language server threw several
+      "unused import" / "cannot find name" diagnostics mid-edit that were simply stale (hadn't caught
+      up with a file save or a fresh `npm install` yet) — confirmed every time via a real `npx tsc
+      --noEmit`, which was clean. When the editor and the actual compiler disagree, trust the compiler.
+
 ## What's next
 
 - Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running API).
 - `npm audit` flagged 3 high-severity issues in `next`'s own transitive deps (`postcss`, `sharp`) —
   pre-existing, unrelated to anything built here. Worth a dedicated look, not fixed yet.
+- Real LinkedIn/GitHub profile URLs for the `Person` JSON-LD's `sameAs` field (left empty — not
+  guessed).
+- Confirm `zohrehsadeghi.se` DNS actually points at the Vercel deployment; until then, `metadataBase`
+  and the sitemap/OG URLs reference a domain that isn't serving the site yet.
