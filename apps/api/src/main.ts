@@ -1,3 +1,6 @@
+import 'dotenv/config';
+import './instrument';
+
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
