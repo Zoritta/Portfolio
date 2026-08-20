@@ -267,15 +267,16 @@ npm run test:watch
 ## What's next
 
 - Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running API).
-- `npm audit` flagged 3 high-severity issues in `next`'s own transitive deps (`postcss`, `sharp`) —
-  pre-existing, unrelated to anything built here. Worth a dedicated look, not fixed yet.
-- Real LinkedIn/GitHub profile URLs for the `Person` JSON-LD's `sameAs` field (left empty — not
-  guessed).
+- ~~`npm audit` flagged 3 high-severity issues in `next`'s own transitive deps (`postcss`,
+  `sharp`)~~ — **fixed, 2026-08-20**: `npm audit fix` resolved `nanoid`; `next`/`eslint-config-next`
+  bumped `16.2.12` → `16.3.1` (exact-pinned, matching the existing convention) resolved `postcss`/
+  `sharp`. `npm audit` now reports 0 vulnerabilities. Build, lint, and tests all still pass.
+- ~~Real LinkedIn/GitHub profile URLs for the `Person` JSON-LD's `sameAs` field (left empty — not
+  guessed)~~ — **added, 2026-08-20**: `sameAs` now lists the real GitHub and LinkedIn profile URLs.
 - ~~Confirm `zohrehsadeghi.se` DNS actually points at the Vercel deployment~~ — **verified live,
   2026-08-19**: DNS resolves to Vercel, `curl`'d real page content (not a placeholder) at `HTTP 200`.
   One nuance found while checking: the bare `zohrehsadeghi.se` root domain `308`-redirects to
   `https://www.zohrehsadeghi.se/` (normal Vercel behavior when `www` is set as the primary domain).
-  `SITE_URL`/`metadataBase` in `layout.tsx`/`sitemap.ts`/`robots.ts` are currently set to the bare
-  apex domain (no `www`), which crawlers will follow through the redirect fine, but isn't the exact
-  final URL. Not broken, just imprecise — worth pointing `SITE_URL` at the `www` version for a
-  fully accurate canonical URL, next time these files are touched.
+  `SITE_URL`/`metadataBase` in `layout.tsx`/`sitemap.ts`/`robots.ts` were pointing at the bare apex
+  domain (no `www`) — **fixed, 2026-08-20**: all four now point at `https://www.zohrehsadeghi.se`,
+  matching the actual canonical URL.

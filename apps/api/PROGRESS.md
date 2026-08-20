@@ -560,7 +560,8 @@ is already running. You still need Docker Desktop itself open first — that par
 - Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
   `ai` SDK version, still functional).
 - MCP server exposing this same data as agent-callable tools.
-- `npm audit` issues in `apps/web` (pre-existing, not yet investigated).
+- ~~`npm audit` issues in `apps/web` (pre-existing, not yet investigated)~~ — **fixed, 2026-08-20**:
+  see `apps/web/PROGRESS.md`. `npm audit` now reports 0 vulnerabilities.
 - Playwright e2e tests.
 - Rotate all OpenAI/Neon credentials once, at the end of the project (deliberately deferred, see
   above).
