@@ -5,7 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { personJsonLd, websiteJsonLd } from "@/lib/structured-data";
 import "./globals.css";
 
-const SITE_URL = "https://zohrehsadeghi.se";
+const SITE_URL = "https://www.zohrehsadeghi.se";
 const TITLE = "Zohreh Sadeghi — Fullstack Developer";
 const DESCRIPTION = "Portfolio of Zohreh Sadeghi, a fullstack developer based in Malmö, Sweden.";
 
