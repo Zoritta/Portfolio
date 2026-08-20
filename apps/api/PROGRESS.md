@@ -578,7 +578,8 @@ is already running. You still need Docker Desktop itself open first — that par
 - MCP server exposing this same data as agent-callable tools.
 - ~~`npm audit` issues in `apps/web` (pre-existing, not yet investigated)~~ — **fixed, 2026-08-20**:
   see `apps/web/PROGRESS.md`. `npm audit` now reports 0 vulnerabilities.
-- Playwright e2e tests.
+- ~~Playwright e2e tests~~ — **added, 2026-08-20**: see `apps/web/PROGRESS.md` (specs live in
+  `apps/web/e2e/`; the AI-backed flows are tested via mocked network responses, not the real API).
 - Rotate all OpenAI/Neon credentials once, at the end of the project (deliberately deferred, see
   above).
 - Rotate the Neon DB password and OpenAI API key (deferred to end of project, see above).

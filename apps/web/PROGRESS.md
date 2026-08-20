@@ -266,7 +266,34 @@ npm run test:watch
 
 ## What's next
 
-- Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running API).
+- ~~Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running
+  API)~~ — **added, 2026-08-20**: `@playwright/test` in `apps/web` (`playwright.config.ts` runs
+  `next dev` as its `webServer`), specs in `apps/web/e2e/`:
+    - `nav-and-theme.spec.ts` — anchor links scroll to their section; theme toggle flips dark/light
+      and persists across reload.
+    - `hero.spec.ts` — rotating role text changes after the 2.5s interval (polls past it via
+      `toPass`, not a fixed wait, so it isn't flaky under CI scheduling jitter).
+    - `fit-analyzer.spec.ts` / `contact-form.spec.ts` — submit-length/email validation gates the
+      button; happy path renders the response; a 503/429 error maps to the right inline message.
+    - `seo.spec.ts` — OG/Twitter meta tags and the Person JSON-LD (including the real `sameAs`
+      URLs) are present; `/sitemap.xml` and `/robots.txt` resolve with the expected content.
+    - **Deliberate choice**: the two AI-backed flows (`fit-analysis`, `contact`) are tested via
+      `page.route()` network mocks, not the real OpenAI/Resend-backed API — LLM output isn't
+      deterministic, both endpoints are rate-limited (`@Throttle`, 3-4/min), and a suite that
+      re-runs repeatedly (especially once Phase 3 CI/CD lands) shouldn't burn real API spend or
+      self-rate-limit. What these specs prove is the frontend's state-machine wiring (loading →
+      success/error), not the AI's output quality — that's already covered by the API's own tests
+      and by the real end-to-end call verified manually during the `generateText` migration.
+    - **Real bug found while wiring this up**: the mocked route initially resolved synchronously,
+      so the "loading" button text (`Analyzing…`/`Sending…`) flipped to success before the
+      assertion could observe it — fixed with a small artificial delay (300ms) in the mocked route,
+      the standard pattern for testing a loading state against a mock.
+    - **Another real bug found**: Jest's default `testMatch` isn't scoped to a directory, so it was
+      also trying to run the Playwright specs (both use `*.spec.ts`) and failing on Playwright's
+      own imports. Fixed with `testPathIgnorePatterns: ["<rootDir>/e2e/"]` in `jest.config.ts`.
+    - Run via `npm run test:e2e` (in `apps/web`) or `npm run test:e2e:web` (from the repo root).
+    - Cursor-glow hover on project cards stays a manual-only check — CSS-only, no functional
+      behavior to assert without visual-regression tooling.
 - ~~`npm audit` flagged 3 high-severity issues in `next`'s own transitive deps (`postcss`,
   `sharp`)~~ — **fixed, 2026-08-20**: `npm audit fix` resolved `nanoid`; `next`/`eslint-config-next`
   bumped `16.2.12` → `16.3.1` (exact-pinned, matching the existing convention) resolved `postcss`/

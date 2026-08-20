@@ -6,6 +6,9 @@ const createJestConfig = nextJest({ dir: "./" });
 const config: Config = {
   testEnvironment: "jest-environment-jsdom",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  // e2e/ holds Playwright specs (also *.spec.ts) — Jest's default testMatch isn't scoped to a
+  // directory, so without this it tries to run them too and fails on Playwright's own imports.
+  testPathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/e2e/"],
   // Mirrors the "@/*" -> "./src/*" alias in tsconfig.json — next/jest's automatic alias
   // detection isn't picking it up on this Next.js version, so it's declared explicitly here.
   moduleNameMapper: {

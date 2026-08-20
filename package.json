@@ -14,6 +14,7 @@
     "lint:web": "npm run lint --workspace=apps/web",
     "lint:api": "npm run lint --workspace=apps/api",
     "test:api": "npm run test --workspace=apps/api",
-    "test:web": "npm run test --workspace=apps/web"
+    "test:web": "npm run test --workspace=apps/web",
+    "test:e2e:web": "npm run test:e2e --workspace=apps/web"
   }
 }
