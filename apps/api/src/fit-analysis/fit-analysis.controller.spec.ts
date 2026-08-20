@@ -6,7 +6,8 @@ import { FitAnalysisService } from './fit-analysis.service';
 // still executes its top-level `import ... from '@ai-sdk/openai'`/`'ai'`, which are ESM-only
 // and would fail to parse under Jest. Mock them so those real files are never loaded.
 jest.mock('ai', () => ({
-  generateObject: jest.fn(),
+  generateText: jest.fn(),
+  Output: { object: jest.fn((opts: unknown) => opts) },
   APICallError: class extends Error {},
 }));
 jest.mock('@ai-sdk/openai', () => ({ createOpenAI: jest.fn(() => jest.fn()) }));

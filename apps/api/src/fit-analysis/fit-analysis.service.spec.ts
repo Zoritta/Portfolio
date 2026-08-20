@@ -9,7 +9,8 @@ import { EmbeddingsService } from '../embeddings/embeddings.service';
 import { FitAnalysisService } from './fit-analysis.service';
 import type { FitReport } from './schemas/fit-report.schema';
 import type {
-  generateObject as GenerateObjectFn,
+  generateText as GenerateTextFn,
+  Output as OutputNamespace,
   APICallError as ApiCallErrorClass,
 } from 'ai';
 
@@ -27,7 +28,8 @@ jest.mock('ai', () => {
     }
   }
   return {
-    generateObject: jest.fn(),
+    generateText: jest.fn(),
+    Output: { object: jest.fn((opts: unknown) => opts) },
     APICallError: MockAPICallError,
   };
 });
@@ -39,10 +41,11 @@ jest.mock('@ai-sdk/openai', () => ({
 // to the real 'ai' types via the type-only import above) makes everything destructured from it
 // fully typed, without using an `as` assertion — a type annotation, not an assertion.
 const aiMock: {
-  generateObject: jest.MockedFunction<typeof GenerateObjectFn>;
+  generateText: jest.MockedFunction<typeof GenerateTextFn>;
+  Output: typeof OutputNamespace;
   APICallError: typeof ApiCallErrorClass;
 } = jest.requireMock('ai');
-const { generateObject: generateObjectMock, APICallError } = aiMock;
+const { generateText: generateTextMock, APICallError } = aiMock;
 
 describe('FitAnalysisService', () => {
   let service: FitAnalysisService;
@@ -79,7 +82,7 @@ describe('FitAnalysisService', () => {
   });
 
   it('returns the generated report and logs it as a FitRequest', async () => {
-    generateObjectMock.mockResolvedValue({ object: report });
+    generateTextMock.mockResolvedValue({ output: report });
 
     const result = await service.analyze('a'.repeat(60));
 
@@ -94,7 +97,7 @@ describe('FitAnalysisService', () => {
   });
 
   it('maps a retryable AI provider error to ServiceUnavailableException', async () => {
-    generateObjectMock.mockRejectedValue(
+    generateTextMock.mockRejectedValue(
       new APICallError({ message: 'rate limited', isRetryable: true }),
     );
 
@@ -104,7 +107,7 @@ describe('FitAnalysisService', () => {
   });
 
   it('maps an unexpected error to InternalServerErrorException', async () => {
-    generateObjectMock.mockRejectedValue(
+    generateTextMock.mockRejectedValue(
       new Error('something unrelated broke'),
     );
 
@@ -114,7 +117,7 @@ describe('FitAnalysisService', () => {
   });
 
   it('still returns the report even if logging the FitRequest fails', async () => {
-    generateObjectMock.mockResolvedValue({ object: report });
+    generateTextMock.mockResolvedValue({ output: report });
     prismaMock.fitRequest.create.mockRejectedValue(new Error('db unavailable'));
 
     const result = await service.analyze('a'.repeat(60));

@@ -557,8 +557,24 @@ is already running. You still need Docker Desktop itself open first — that par
 
 ## What's next
 
-- Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
-  `ai` SDK version, still functional).
+- ~~Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
+  `ai` SDK version, still functional)~~ — **done, 2026-08-20**: `fit-analysis.service.ts` now calls
+  `generateText({ model, output: Output.object({ schema }), ... })` and reads `{ output: report }`
+  instead of `generateObject`'s `{ object: report }` — same typed return (`FitReport`), same
+  `system`/`prompt` args, no logic change. The SDK's new `NoOutputGeneratedError` (thrown when the
+  model responds but can't produce valid output) isn't `APICallError`, so it falls through to the
+  existing generic `InternalServerErrorException` catch-all untouched — no new branch needed.
+  Updated both spec files' `jest.mock('ai', ...)` fixtures to mock `generateText`/`Output` instead
+  of `generateObject`. Verified against the real running server (not just mocks): `POST
+  /fit-analysis` with a real job description returned `201` with a well-formed, schema-valid
+  report, and the `FitRequest` row was confirmed in Postgres.
+  **Found, not fixed (pre-existing, unrelated to this migration)**: `npx tsc --noEmit` flags the
+  mocked `generateText`/`generateObject` return values in `fit-analysis.service.spec.ts` as missing
+  several `GenerateTextResult`/`GenerateObjectResult` properties (`reasoning`, `finishReason`,
+  `usage`, etc.) — confirmed via `git stash` that this exact error already existed against the old
+  `generateObject` mock, so it predates this change. `npm test` doesn't catch it (ts-jest isn't
+  doing full type-checking on spec files). Worth a proper fix later (likely `as
+  Awaited<ReturnType<typeof generateText>>` on the two mock call sites, or a narrower mock type).
 - MCP server exposing this same data as agent-callable tools.
 - ~~`npm audit` issues in `apps/web` (pre-existing, not yet investigated)~~ — **fixed, 2026-08-20**:
   see `apps/web/PROGRESS.md`. `npm audit` now reports 0 vulnerabilities.

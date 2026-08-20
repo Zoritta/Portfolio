@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createOpenAI } from '@ai-sdk/openai';
-import { generateObject, APICallError, type LanguageModel } from 'ai';
+import { generateText, Output, APICallError, type LanguageModel } from 'ai';
 import { APIError } from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -88,9 +88,9 @@ export class FitAnalysisService {
         RETRIEVAL_TOP_K,
       );
 
-      const { object: report } = await generateObject({
+      const { output: report } = await generateText({
         model: this.getModel(),
-        schema: fitReportSchema,
+        output: Output.object({ schema: fitReportSchema }),
         system: SYSTEM_PROMPT,
         prompt: this.buildPrompt(jobDescription, sources),
       });
