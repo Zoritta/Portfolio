@@ -19,7 +19,7 @@ export function ProjectCard({ project }: { project: Project }) {
     <article
       ref={cardRef}
       onMouseMove={handleMouseMove}
-      className="group relative overflow-hidden rounded-lg border border-zinc-200 p-5 transition-shadow hover:shadow-md dark:border-zinc-800 dark:hover:shadow-zinc-900/50"
+      className="group relative overflow-hidden rounded-xl border border-zinc-200 p-6 transition-shadow hover:shadow-md dark:border-zinc-800 dark:hover:shadow-zinc-900/50"
     >
       <div
         aria-hidden="true"
@@ -72,7 +72,7 @@ export function ProjectCard({ project }: { project: Project }) {
           {project.techStack.map((tech) => (
             <li
               key={tech}
-              className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+              className="rounded-full bg-accent-bg px-3 py-1 text-xs text-accent"
             >
               {tech}
             </li>

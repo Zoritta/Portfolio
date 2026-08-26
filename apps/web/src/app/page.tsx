@@ -29,10 +29,10 @@ export default async function Home() {
   return (
     <>
       <Nav />
-      <main className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-16 font-sans dark:bg-black sm:px-16">
-        <div className="flex w-full max-w-3xl flex-col gap-16">
-          <Hero />
+      <main className="flex flex-1 flex-col items-center font-sans">
+        <Hero />
 
+        <div className="flex w-full max-w-3xl flex-col gap-24 px-6 py-20 sm:px-16 sm:py-28">
           <FitAnalyzer />
 
           <ScrollReveal>

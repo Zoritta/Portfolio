@@ -5,7 +5,10 @@ import { ProjectCard } from "@/components/ProjectCard";
 export function Projects({ projects }: { projects: Project[] }) {
   return (
     <section id="projects" className="scroll-mt-24">
-      <h2 className="text-xl font-semibold text-black dark:text-zinc-50">Projects</h2>
+      <span className="text-xs font-medium uppercase tracking-wide text-accent">Work</span>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-black dark:text-zinc-50 sm:text-3xl">
+        Projects
+      </h2>
       {projects.length === 0 ? (
         <EmptyState message="No projects listed yet — check back soon." />
       ) : (

@@ -264,6 +264,51 @@ npm run test:watch
       up with a file save or a fresh `npm install` yet) — confirmed every time via a real `npx tsc
       --noEmit`, which was clean. When the editor and the actual compiler disagree, trust the compiler.
 
+14. **UI/UX upgrade pass #2 — warm terracotta redesign (standalone effort, not a roadmap phase,
+    2026-08-26).** Prompted by comparing the homepage against another portfolio site
+    (luisaescalona.com) for reference only, not to copy — the real gap identified was hierarchy and
+    pacing: everything (hero, section headers, cards) rendered at the same visual weight inside one
+    flat `max-w-3xl` column. Scoped via `EnterPlanMode` + `AskUserQuestion` before touching code
+    (accent palette and hero-content options presented with preview swatches/mockups so the actual
+    look was agreed before implementation, not just the plan text).
+    - **New accent color system** (`globals.css`): added `--accent`/`--accent-bg` CSS variables
+      (light: `#b8552f` on `#fdfbf9`; dark: `#d97a52` on `#171310`) registered in the existing
+      `@theme inline` block alongside `--color-background`/`--color-foreground` — this is what makes
+      Tailwind v4 auto-generate `bg-accent`/`text-accent`/`border-accent`/`bg-accent-bg` utility
+      classes from a single token definition, no plugin config needed. `--glow-color` (used by
+      `ProjectCard`'s cursor-follow hover glow, added in the Stage 3 pass) was retuned to a
+      terracotta-tinted rgba to match, with zero code change in `ProjectCard.tsx` itself — proof the
+      token-based color system from the original pass paid off.
+    - **Hero redesign** (`Hero.tsx`): went from an 80px avatar + name in a horizontal row to a
+      full-bleed centered section — 128px photo, an accent-tinted "Available for opportunities in
+      Sweden & Denmark" badge, name bumped to `text-5xl`, a new one-line value-prop sentence, and two
+      CTA buttons (`View Projects` / `Contact me`, plain anchor scroll links to `#projects`/`#contact`,
+      no new JS). Moved out of the `max-w-3xl` column entirely in `page.tsx` so it can span full width
+      independently of the rest of the content.
+    - **Section hierarchy**: `Projects`/`Experience`/`Skills`/`ContactForm` all gained a small
+      uppercase accent "eyebrow" label above their `h2` (`WORK`, `BACKGROUND`, `TOOLKIT`,
+      `GET IN TOUCH`), and the `h2`s themselves grew from a flat `text-xl` to `text-2xl sm:text-3xl`
+      — purely a styling change, no prop/logic changes to any of the four components.
+    - **Consistent accent tinting**: tech-stack pills (`ProjectCard`) and skill pills (`Skills`) both
+      switched from neutral `bg-zinc-100` to `bg-accent-bg text-accent`; form buttons
+      (`ContactForm`/`FitAnalyzer`) switched from a hardcoded `bg-black`/`dark:bg-zinc-50` pair to a
+      single `bg-accent` (no `dark:` override needed, since the accent token itself already differs
+      per theme); input/textarea focus rings switched from `focus:border-zinc-400` to
+      `focus:border-accent`.
+    - **Favicon fix, same session**: `src/app/favicon.ico` was the unmodified default
+      `create-next-app` icon — deleted it, since a static `favicon.ico` in the same route segment
+      takes priority over the file-convention `icon.tsx` that already generates a custom "ZS" icon
+      (added in the Stage 4 SEO pass), so the custom icon was silently never actually showing.
+      `icon.tsx`'s hardcoded colors (`#171717`/`#ededed`, left over from the pre-redesign palette)
+      were then updated to the new accent (`#b8552f` background, `#fdfbf9` text) to match.
+    - **Verified for real**: `npm run lint` and `npm test` (both apps unaffected — existing
+      `ContactForm.spec.tsx`/`FitAnalyzer.spec.tsx` query by role/placeholder/text, not class names,
+      so the restyle didn't touch them) stayed green throughout. Visual check used a real running
+      `next dev` + NestJS + Postgres stack (not mocked data) — clicked through every section in both
+      light and dark mode via the theme toggle, confirmed the accent tint reads correctly against
+      both `--background` values, confirmed `/favicon.ico` now 404s and `/icon` serves the recolored
+      PNG (`curl`'d both routes directly, not just eyeballed the tab).
+
 ## What's next
 
 - ~~Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running

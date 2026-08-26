@@ -45,7 +45,10 @@ export function ContactForm() {
 
   return (
     <section id="contact" className="scroll-mt-24">
-      <h2 className="text-xl font-semibold text-black dark:text-zinc-50">Contact</h2>
+      <span className="text-xs font-medium uppercase tracking-wide text-accent">Get in touch</span>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-black dark:text-zinc-50 sm:text-3xl">
+        Contact
+      </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         Have a role or project in mind? Send a message and I&apos;ll get back to you.
       </p>
@@ -57,14 +60,14 @@ export function ContactForm() {
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Your name"
-            className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
+            className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
           />
           <input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="Your email"
-            className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
+            className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
           />
         </div>
         <textarea
@@ -72,7 +75,7 @@ export function ContactForm() {
           onChange={(event) => setMessage(event.target.value)}
           placeholder="Your message…"
           rows={5}
-          className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
+          className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
         />
 
         {/* Honeypot: hidden off-screen via CSS rather than type="hidden" (bots specifically skip
@@ -97,7 +100,7 @@ export function ContactForm() {
           <button
             type="submit"
             disabled={!isValid || status === "loading"}
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-50 dark:text-black"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {status === "loading" ? "Sending…" : "Send Message"}
           </button>
