@@ -12,6 +12,7 @@ import { ExperienceModule } from './experience/experience.module';
 import { EmbeddingsModule } from './embeddings/embeddings.module';
 import { FitAnalysisModule } from './fit-analysis/fit-analysis.module';
 import { ContactModule } from './contact/contact.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ContactModule } from './contact/contact.module';
     EmbeddingsModule,
     FitAnalysisModule,
     ContactModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [

@@ -18,7 +18,10 @@ const ALLOWED_ORIGINS = [
 ].filter((origin): origin is string => Boolean(origin));
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true keeps the exact bytes of each request around (on req.rawBody) alongside the
+  // normally-parsed req.body — needed to verify the Sentry webhook's HMAC signature, which is
+  // computed over Sentry's original bytes and won't match a re-serialized copy of the parsed JSON.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.use(helmet());
   app.enableCors({ origin: ALLOWED_ORIGINS });
   await app.listen(process.env.PORT ?? 3001);
