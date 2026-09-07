@@ -31,6 +31,8 @@ export class WebhooksService {
     if (!isValid) {
       throw new UnauthorizedException('Invalid Sentry webhook signature');
     }
+
+    this.logger.log('Sentry webhook signature verified');
   }
 
   async relayToSlack(payload: unknown): Promise<void> {
@@ -48,6 +50,8 @@ export class WebhooksService {
       });
       if (!response.ok) {
         this.logger.error(`Slack webhook responded with ${response.status}`);
+      } else {
+        this.logger.log('Relayed Sentry alert to Slack successfully');
       }
     } catch (error) {
       // This alert failing to send shouldn't itself become an unhandled error — log it and move
