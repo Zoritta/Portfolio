@@ -9,9 +9,4 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
-
-  @Get('sentry-webhook-test-tmp')
-  throwTestError(): never {
-    throw new Error('Sentry test error: webhook relay end-to-end check');
-  }
 }
