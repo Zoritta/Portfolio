@@ -309,6 +309,32 @@ npm run test:watch
       both `--background` values, confirmed `/favicon.ico` now 404s and `/icon` serves the recolored
       PNG (`curl`'d both routes directly, not just eyeballed the tab).
 
+15. **Sentry error tracking (part of Phase 6: Monitoring — the backend half is `apps/api/PROGRESS.md`
+    #21).** `@sentry/nextjs`, split across the runtimes Next.js actually has:
+    - `instrumentation.ts` — Next's `register()` hook, called once on server startup; picks
+      `sentry.server.config.ts` (Node.js runtime) or `sentry.edge.config.ts` (edge/middleware) based
+      on `process.env.NEXT_RUNTIME`, so only the matching one loads. Also exports
+      `onRequestError = Sentry.captureRequestError`, the only thing that catches errors thrown
+      during rendering but outside a component (nested Server Components) — `global-error.tsx`
+      alone doesn't see those.
+    - `instrumentation-client.ts` — Next auto-loads this by filename for browser-side code; also
+      exports `onRouterTransitionStart = Sentry.captureRouterTransitionStart` so client-side route
+      changes (clicking a `Link`) get tracked as navigation spans, not just full page loads
+      (resolves a Sentry "ACTION REQUIRED" build warning otherwise).
+    - `src/app/global-error.tsx` — the only place that can catch an error thrown by the root layout
+      itself, since a normal `error.tsx` boundary renders *inside* the layout it would need to
+      replace if the layout is what broke.
+    - `next.config.ts` wrapped with `withSentryConfig` — no `org`/`project`/`authToken` configured
+      yet, so this only wires up error reporting; it doesn't upload source maps, meaning stack
+      traces in Sentry currently show minified code. Deferred, not forgotten.
+    - **Real bug found and fixed**: `global-error.tsx` was initially written to `apps/web/app/` —
+      this project's actual App Router root is `apps/web/src/app/`, so the stray top-level `app/`
+      directory broke `npm run build` with a Next.js typed-routes error. Fixed by moving the file
+      to the correct location and deleting the stray directory.
+    - **Verified for real**: a temporary test page + API route (both since deleted) threw real
+      client-side and server-side errors and confirmed both reached the Sentry dashboard, before
+      any of the temp scaffolding was removed.
+
 ## What's next
 
 - ~~Playwright for e2e (including a full Job Fit Analyzer submit flow against a real running
@@ -352,3 +378,7 @@ npm run test:watch
   `SITE_URL`/`metadataBase` in `layout.tsx`/`sitemap.ts`/`robots.ts` were pointing at the bare apex
   domain (no `www`) — **fixed, 2026-08-20**: all four now point at `https://www.zohrehsadeghi.se`,
   matching the actual canonical URL.
+- ~~Phase 6: Monitoring (Sentry error tracking)~~ — **done, 2026-09-07**, see #15 above. Uptime
+  monitoring and chat alerts (Discord/Slack) are cross-app/infra concerns, not frontend code — see
+  `apps/api/PROGRESS.md` #21 for the full picture.
+- **Phase 7: Authentication — starting now.**

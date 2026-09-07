@@ -555,6 +555,77 @@ is already running. You still need Docker Desktop itself open first — that par
       `{"success":true}`, a real email arrived, and the row landed in `ContactMessage` — then deleted
       that test row).
 
+21. **Monitoring (Phase 6 of the roadmap).** Three pieces: error tracking, uptime monitoring, and
+    chat alerts for both.
+    - **Sentry error tracking** — `@sentry/nestjs`. `src/instrument.ts` (`Sentry.init({ dsn:
+      process.env.SENTRY_DSN, tracesSampleRate: 1.0 })`) is imported as the very first line of
+      `main.ts`, before anything else, so Sentry can instrument the rest of the app as it loads.
+      `SentryModule.forRoot()` + `SentryGlobalFilter` (registered as the global `APP_FILTER`) in
+      `app.module.ts` catch every unhandled exception and forward it to Sentry before NestJS's own
+      default error response goes out.
+      - **Real bug found and fixed**: `SENTRY_DSN` wasn't loading locally, even though it was in
+        `.env`. `@nestjs/config`'s `ConfigModule.forRoot()` only parses `.env` once
+        `NestFactory.create(AppModule)` runs — but `instrument.ts` calls `Sentry.init()` on import,
+        *before* that line executes. Fixed with `import 'dotenv/config';` as the literal first line
+        of `main.ts`, ahead of `import './instrument'`. Local-dev-only fix — Render injects env
+        vars directly into the process in production, no `.env` file involved there.
+    - **Uptime monitoring** — UptimeRobot, two monitors (`apps/web`, `apps/api` root `/`), 5-minute
+      interval, chosen short enough to double as a keep-alive ping against Render's free-tier
+      hibernation (triggered by a real incident: Render's hibernate/wake automation got stuck once
+      mid-project, `503` with `x-render-routing: hibernate-wake-error`, fixed with a manual restart
+      from Render's dashboard — platform-side, not a code bug).
+    - **Chat alerts** — UptimeRobot's downtime alerts go to **Discord** (its native integration is
+      free on every plan). Sentry's error alerts go to **Slack**, but through a relay we had to
+      build ourselves: Sentry's native Slack/Discord integrations both turned out to require a paid
+      Team plan, so a small relay endpoint does the same job for free using infrastructure we
+      already have.
+      - New `src/webhooks/` module (`webhooks.controller.ts` + `webhooks.service.ts`),
+        `POST /webhooks/sentry`. Sentry side: an "Internal Integration" (Settings → Developer
+        Settings → Custom Integrations) named `Slack Relay`, with **Alert Rule Action** enabled
+        (makes it selectable as an action on issue alert rules) and **Issue & Event: Read**
+        permission granted. Each project's alert rule adds "Send a notification via Slack Relay" as
+        an action, alongside the existing default email notification.
+      - **Signature verification**: Sentry signs each webhook with HMAC-SHA256 over the raw request
+        body, sent in a `Sentry-Hook-Signature` header, using the integration's Client Secret
+        (`SENTRY_WEBHOOK_SECRET`). Verifying this means a stranger can't spam fake "error" messages
+        into the Slack channel. `main.ts` now passes `{ rawBody: true }` to `NestFactory.create` —
+        hashing a re-serialized copy of the already-parsed JSON body won't match Sentry's original
+        bytes (different key order/spacing), so NestJS's raw-body capture is needed to hash the
+        exact bytes Sentry actually sent.
+      - `formatMessage()` extracts title/culprit/URL defensively from Sentry's payload (its exact
+        shape isn't fully pinned down in Sentry's own docs, and differs by event type) and falls
+        back to a raw JSON dump so an unanticipated shape still shows up in Slack instead of
+        silently vanishing.
+      - **Three real bugs found while wiring this up**:
+        1. An internal integration's Permissions default to **No Access** — separate from the
+           "Alert Rule Action" checkbox. With permissions unset, Sentry silently never sends the
+           webhook at all, no error shown anywhere. Fixed by granting Issue & Event: Read.
+        2. `SENTRY_DSN` disappeared from Render's environment variables at some point during this
+           work (cause unknown), silently breaking `apps/api`'s own error capture the same way the
+           local dotenv bug did. Caught by checking Sentry's Issues list and finding nothing there;
+           re-added and confirmed working.
+        3. The relay's own logging only covered failure paths — a fully successful request produced
+           zero log output, making "Sentry never called this" indistinguishable from "it worked
+           silently" while debugging. Fixed by adding `Logger.log`/`Logger.warn` on every branch
+           (request received, signature verified, signature mismatch with byte-length detail, relay
+           succeeded) as permanent logging, not a temporary debug add. This is what actually
+           unstuck a long, unproductive round of guess-and-retest: the very next test surfaced a
+           specific, actionable finding (a stale `SENTRY_WEBHOOK_SECRET` in Render that didn't match
+           Sentry's current Client Secret — fixed by regenerating it fresh) instead of another round
+           of blind re-testing.
+      - **Verified for real**: a temporary route thrown deliberately in production
+        (`app.controller.ts`, removed after) confirmed the full chain end-to-end — Sentry captured
+        the error, the alert rule fired, the relay verified the signature and posted to Slack, and
+        the formatted message appeared in the channel. Full test suite (15 suites / 41 tests) and
+        `tsc --noEmit` stayed clean throughout (aside from the pre-existing, unrelated
+        `fit-analysis.service.spec.ts` type gap noted below).
+    - **Deliberately not built**: a dedicated `/health` endpoint (`@nestjs/terminus`) — the uptime
+      monitor points at the existing trivial `GET /` route instead, which is enough to detect "is
+      the app up at all." Revisit only if a real need for DB-connectivity-specific health checking
+      comes up. Also deliberately rejected: a Zapier/Make bridge for the Sentry→Slack path (an
+      extra third-party dependency in the alert path, when owning ~100 lines of relay code in an
+      app we already run was the more portfolio-relevant and equally-free option).
+
 ## What's next
 
 - ~~Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
@@ -586,3 +657,5 @@ is already running. You still need Docker Desktop itself open first — that par
 - Consider whether the fresh Resend key (added 2026-08-19) should be rotated now rather than bundled
   into the end-of-project rotation — it passed through this session's tooling output once, similar to
   the earlier OpenAI/Neon incidents, but is new/cheap to redo since nothing depends on it yet.
+- ~~Phase 6: Monitoring~~ — **done, 2026-09-07**, see #21 above.
+- **Phase 7: Authentication — starting now.**
