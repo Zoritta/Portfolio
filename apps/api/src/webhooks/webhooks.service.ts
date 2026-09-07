@@ -29,6 +29,9 @@ export class WebhooksService {
       timingSafeEqual(expectedBuffer, providedBuffer);
 
     if (!isValid) {
+      this.logger.warn(
+        `Signature mismatch: expected ${expectedBuffer.length}-byte digest, got ${providedBuffer.length}-byte value from header`,
+      );
       throw new UnauthorizedException('Invalid Sentry webhook signature');
     }
 
