@@ -697,12 +697,23 @@ is already running. You still need Docker Desktop itself open first — that par
   into the end-of-project rotation — it passed through this session's tooling output once, similar to
   the earlier OpenAI/Neon incidents, but is new/cheap to redo since nothing depends on it yet.
 - ~~Phase 6: Monitoring~~ — **done, 2026-09-07**, see #21 above.
-- **Neon CU-hour incident (see #22) — not yet fully resolved as of 2026-09-21**:
-  - Turn off, or drastically slow down, the UptimeRobot monitor pinging `apps/api`'s root route —
-    decided but not yet actioned.
-  - The site itself is still down (`/projects` etc. still `500` as of 2026-09-21) — confirm Neon's
-    allowance reset date and decide whether to wait it out or upgrade to restore it sooner.
-  - Sentry's alert rule for this project re-notifies on ~every recurrence of an unresolved issue
-    instead of digesting/rate-limiting — worth tuning so one incident doesn't produce 100+ emails
-    again.
+- **Neon CU-hour incident (see #22) — root cause fixed, outage itself still open as of 2026-09-21**:
+  - The actual fix (caching the homepage's API reads, `apps/web` commit `b31a19f`) is in; no
+    UptimeRobot changes were needed after all — see #22 for why that first theory didn't hold up.
+  - **Decided not to upgrade Neon to restore the site early**: with the fix now capping DB reads to
+    ~once/hour, the remaining downtime is the acceptable cost of staying on the Free plan rather than
+    taking on a recurring paid plan for a portfolio project. Waiting for the compute allowance to
+    reset (~Oct 1, 2026, inferred from "usage since Sep 1" on Neon's usage panel — not an explicit
+    date Neon shows anywhere).
+  - Once reset: confirm `/projects` etc. return `200` again, and keep an eye on Neon's usage panel
+    over the following weeks to confirm the fix actually held (i.e. CU-hours climbing slowly, not
+    repeating the same trajectory toward 100).
+  - ~~Sentry's alert rule for this project re-notifies on ~every recurrence of an unresolved issue
+    instead of digesting/rate-limiting~~ — **done, 2026-09-21**: `Send a notification for high
+    priority issues` (`portfolio-api`) had **Action Throttle: "Get notified on every trigger"** —
+    the actual cause of 100+ near-identical emails (2,522 triggers from one issue alone). Set to
+    **12 hours** for now, intentionally generous while the site is expected to be down anyway
+    (waiting on the Neon reset). **Once Neon resets and the site's back up, turn this down to 60
+    minutes** — was the original recommendation, picked 12h only to stay quiet during the known
+    outage.
 - **Phase 7: Authentication — starting now.**
