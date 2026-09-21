@@ -643,24 +643,27 @@ is already running. You still need Docker Desktop itself open first — that par
       arrived a day before the Sentry flood and on a different thread) said the free-tier
       `portfolio-prod` project had used 100% of its 100 CU-hour monthly compute allowance and Neon
       had suspended the compute until the allowance resets or the project is upgraded.
-    - **Why (likely, not independently instrumented against Neon's own activity graphs)**: this
-      looks like an interaction between two Phase 6 decisions rather than one bug. The UptimeRobot
-      5-minute keep-alive ping against `apps/api`'s root route (added specifically to defeat
-      Render's free-tier hibernation, see #21) keeps the NestJS process — and with it,
-      `PrismaService`'s connection pool — alive continuously. Neon's autosuspend only fires once it
-      sees zero active connections; an idle-but-open Prisma connection still counts as activity. So
-      the compute most likely never got to suspend for the better part of a month and just accrued
-      CU-hours the whole time, independent of actual visitor traffic. Consistent with the ~30-day
-      timeline (this project's uptime pings started well before) and with this never having happened
-      before that keep-alive ping existed.
-    - **Decision**: rather than fight it at the Prisma connection-pool layer (pool size limits,
-      periodic forced disconnects) or pay for more Neon compute, chose to loosen the anti-hibernation
-      ping instead — a few seconds' cold start on Render's first request after idle is normal and
-      acceptable for a free-tier portfolio project, and it lets both Render and Neon suspend the way
-      their free tiers are designed to.
-    - **Status**: root cause identified and decision made; see "What's next" for what's still open —
-      the UptimeRobot monitor change itself, and getting the live site back up (this incident doesn't
-      self-heal from the UptimeRobot change alone; that only prevents the *next* one).
+    - **Why — first theory, checked and wrong**: initially assumed this was the UptimeRobot 5-minute
+      keep-alive ping against `apps/api`'s root route (added in Phase 6 to defeat Render's free-tier
+      hibernation, see #21) keeping `PrismaService`'s connection pool open continuously, which would
+      block Neon's autosuspend. Before acting on it, checked UptimeRobot directly instead of just
+      trusting the write-up above — the `Portfolio API` monitor is actually set to a **12-hour**
+      interval, not 5 minutes, which can't produce continuous activity. Good thing this got checked
+      live rather than "fixed" by pausing a monitor that wasn't the cause.
+    - **Why — actual root cause**: `apps/web/src/lib/api.ts`'s `fetchJson()` called `fetch(url, {
+      cache: 'no-store' })` for `getProjects`/`getSkills`/`getExperience` — every single homepage
+      load did three **live, uncached** Postgres reads via the API, real visitor or not. The
+      `Portfolio Web` UptimeRobot monitor (the *other* one) checks that homepage every 5 minutes,
+      24/7. That alone is a guaranteed live DB round-trip every 5 minutes for the better part of a
+      month — more than enough to burn 100 CU-hours, independent of any Render/Neon connection-pool
+      behavior.
+    - **Fix**: changed `fetchJson` to `fetch(url, { next: { revalidate: 3600 } })` (Next.js data
+      cache, 1-hour revalidation) — see `apps/web/PROGRESS.md`. Caps DB reads for this data to at
+      most once/hour regardless of visitor or monitor traffic, rather than trying to fight it from
+      the monitoring-interval side. No change needed to either UptimeRobot monitor.
+    - **Status**: root cause fixed at the code level; see "What's next" for what's still
+      open — this doesn't self-heal today's outage, since Neon's compute is still suspended for the
+      current billing period regardless of the fix landing.
 
 ## What's next
 

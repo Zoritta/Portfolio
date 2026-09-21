@@ -36,7 +36,7 @@ export type FitReport = {
 };
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
+  const response = await fetch(`${API_URL}${path}`, { next: { revalidate: 3600 } });
   if (!response.ok) {
     throw new Error(`API request to ${path} failed with status ${response.status}`);
   }
