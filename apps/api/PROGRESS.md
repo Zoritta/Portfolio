@@ -626,6 +626,42 @@ is already running. You still need Docker Desktop itself open first — that par
       extra third-party dependency in the alert path, when owning ~100 lines of relay code in an
       app we already run was the more portfolio-relevant and equally-free option).
 
+22. **Production incident: Neon compute exhausted its free-tier monthly CU-hour allowance —
+    Phase 6's monitoring catching its first real production failure (2026-09-18/19).**
+    - **What happened**: starting ~18:59 CEST on 2026-09-18, every request to `/projects`,
+      `/experience`, and `/skills` began failing with `PrismaClientKnownRequestError: Can't reach
+      database server at ep-blue-bread-...-pooler...neon.tech`. Sentry caught it immediately (its
+      job) and then re-notified on essentially every re-trigger for the next 12+ hours — 100+
+      near-identical emails for what is really one ongoing incident, which is its own follow-up
+      item below.
+    - **Diagnosis**: the identical connection-layer error across three otherwise-unrelated
+      `findMany()` calls — rather than a query-specific error on just one of them — pointed at the
+      database itself being unreachable, not an app bug. Confirmed by checking the trivial `GET /`
+      route (no DB call) directly: it kept returning `200` the entire time, while all three DB-backed
+      routes stayed at `500`. So: app up, database down.
+    - **Root cause**: a separate Neon Alerts email (2026-09-17, 07:51 CEST, easy to miss since it
+      arrived a day before the Sentry flood and on a different thread) said the free-tier
+      `portfolio-prod` project had used 100% of its 100 CU-hour monthly compute allowance and Neon
+      had suspended the compute until the allowance resets or the project is upgraded.
+    - **Why (likely, not independently instrumented against Neon's own activity graphs)**: this
+      looks like an interaction between two Phase 6 decisions rather than one bug. The UptimeRobot
+      5-minute keep-alive ping against `apps/api`'s root route (added specifically to defeat
+      Render's free-tier hibernation, see #21) keeps the NestJS process — and with it,
+      `PrismaService`'s connection pool — alive continuously. Neon's autosuspend only fires once it
+      sees zero active connections; an idle-but-open Prisma connection still counts as activity. So
+      the compute most likely never got to suspend for the better part of a month and just accrued
+      CU-hours the whole time, independent of actual visitor traffic. Consistent with the ~30-day
+      timeline (this project's uptime pings started well before) and with this never having happened
+      before that keep-alive ping existed.
+    - **Decision**: rather than fight it at the Prisma connection-pool layer (pool size limits,
+      periodic forced disconnects) or pay for more Neon compute, chose to loosen the anti-hibernation
+      ping instead — a few seconds' cold start on Render's first request after idle is normal and
+      acceptable for a free-tier portfolio project, and it lets both Render and Neon suspend the way
+      their free tiers are designed to.
+    - **Status**: root cause identified and decision made; see "What's next" for what's still open —
+      the UptimeRobot monitor change itself, and getting the live site back up (this incident doesn't
+      self-heal from the UptimeRobot change alone; that only prevents the *next* one).
+
 ## What's next
 
 - ~~Migrate `generateObject` → `generateText` with an `output` setting (deprecated in the installed
@@ -658,4 +694,12 @@ is already running. You still need Docker Desktop itself open first — that par
   into the end-of-project rotation — it passed through this session's tooling output once, similar to
   the earlier OpenAI/Neon incidents, but is new/cheap to redo since nothing depends on it yet.
 - ~~Phase 6: Monitoring~~ — **done, 2026-09-07**, see #21 above.
+- **Neon CU-hour incident (see #22) — not yet fully resolved as of 2026-09-21**:
+  - Turn off, or drastically slow down, the UptimeRobot monitor pinging `apps/api`'s root route —
+    decided but not yet actioned.
+  - The site itself is still down (`/projects` etc. still `500` as of 2026-09-21) — confirm Neon's
+    allowance reset date and decide whether to wait it out or upgrade to restore it sooner.
+  - Sentry's alert rule for this project re-notifies on ~every recurrence of an unresolved issue
+    instead of digesting/rate-limiting — worth tuning so one incident doesn't produce 100+ emails
+    again.
 - **Phase 7: Authentication — starting now.**
