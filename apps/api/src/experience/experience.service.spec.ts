@@ -27,16 +27,27 @@ describe('ExperienceService', () => {
   });
 
   describe('findAll', () => {
-    it('returns all experiences ordered by startDate descending', async () => {
+    it('queries ordered by startDate descending', async () => {
       const experiences = [{ id: '1', company: 'Insighta Inc.' }];
       prismaMock.experience.findMany.mockResolvedValue(experiences);
 
-      const result = await service.findAll();
+      await service.findAll();
 
-      expect(result).toBe(experiences);
       expect(prismaMock.experience.findMany).toHaveBeenCalledWith({
         orderBy: { startDate: 'desc' },
       });
+    });
+
+    it('moves education entries after work experience, preserving relative order within each group', async () => {
+      const education = { id: 'edu-1', company: 'Jensen Yrkeshögskola' };
+      const workNewer = { id: 'work-1', company: 'Insighta Inc.' };
+      const workOlder = { id: 'work-2', company: 'Polestar' };
+      // Prisma already returned these startDate-desc, with education interleaved.
+      prismaMock.experience.findMany.mockResolvedValue([workNewer, education, workOlder]);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual([workNewer, workOlder, education]);
     });
   });
 

@@ -8,28 +8,28 @@ const experiences = [
     role: 'Fullstack Developer',
     description:
       'Delivered production features end-to-end on a two-week agile release cycle while the company doubled its client base. Built and scaled a React/TypeScript frontend (interactive dashboards, sortable data tables, dynamic filters) turning complex datasets into self-serve tools for non-technical business users. Partnered cross-functionally with product managers, UX designers, and backend engineers, shaping API design. Owned CI/CD pipelines and deployment workflows on AWS; raised engineering standards through code reviews. Stack: TypeScript, React, Next.js, Redux, Tailwind CSS, Node.js, Jest, Playwright, REST APIs, GitHub Actions, AWS.',
-    startDate: new Date('2025-03-01'),
+    startDate: new Date('2024-11-01'),
     endDate: null,
   },
   {
     company: 'Sigma Technology Embedded Networks',
-    role: 'Fullstack Developer',
+    role: 'Frontend Developer',
     description:
       'Built and shipped user interfaces for client applications on the Axis Camera Application Platform (ACAP), ramping up quickly in a specialised embedded systems domain. Delivered real-time dashboards and traffic-analysis tooling from live IoT device data, working directly with backend and firmware engineers on API integration and data flows. Managed CI/CD pipelines and refactored core code paths, improving performance and long-term maintainability.',
-    startDate: new Date('2023-12-01'),
-    endDate: new Date('2025-03-01'),
+    startDate: new Date('2023-10-01'),
+    endDate: new Date('2024-10-01'),
   },
   {
     company: 'Polestar',
-    role: 'Frontend Developer (Intern)',
+    role: 'Fullstack Developer',
     description:
       'Delivered client-facing web application features in an agile, cross-functional team, with a focus on quality, usability, and clean code. Applied TDD principles and contributed to CI/CD pipeline maintenance across sprints.',
-    startDate: new Date('2022-12-01'),
-    endDate: new Date('2023-12-01'),
+    startDate: new Date('2021-08-01'),
+    endDate: new Date('2023-09-01'),
   },
   {
     company: 'Jensen Yrkeshögskola',
-    role: 'System Development — Security Focus (Higher Vocational Education)',
+    role: 'System Development — Security Focus',
     description:
       'Full stack application development in TypeScript, React, C#, .NET, Java, and SQLite. REST API design and implementation; client-side and server-side architecture for scalable applications.',
     startDate: new Date('2024-08-01'),
@@ -37,7 +37,7 @@ const experiences = [
   },
   {
     company: 'Jensen Yrkeshögskola',
-    role: 'DevOps Engineer Programme (Higher Vocational Education)',
+    role: 'DevOps Engineer Programme',
     description:
       'Cloud system design on AWS and Azure; Kubernetes, Docker, CI/CD pipelines, Terraform and GitHub Actions. Infrastructure automation, monitoring, and observability in cloud-native environments.',
     startDate: new Date('2022-08-01'),
