@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import { ArchitectureFlow } from "@/components/ArchitectureFlow";
 
@@ -10,9 +13,10 @@ const SCREENSHOT_PROJECTS: Record<string, { src: string; alt: string }> = {
 
 const DIAGRAM_PROJECTS = new Set(["AI-Integrated Creative Assistant"]);
 
-export function ProjectVisual({ title }: { title: string }) {
+/** Server-only: resolves to a screenshot, a diagram, or null, depending on what's available for this project. */
+export function getProjectVisual(title: string): ReactNode | null {
   const screenshot = SCREENSHOT_PROJECTS[title];
-  if (screenshot) {
+  if (screenshot && existsSync(join(process.cwd(), "public", screenshot.src))) {
     return (
       <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
         <Image

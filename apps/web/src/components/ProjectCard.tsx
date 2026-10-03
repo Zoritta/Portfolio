@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, type MouseEvent } from "react";
+import { useRef, type MouseEvent, type ReactNode } from "react";
 import { Code2, ExternalLink } from "lucide-react";
 import type { Project } from "@/lib/api";
-import { ProjectVisual } from "@/components/ProjectVisual";
 
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({ project, visual }: { project: Project; visual?: ReactNode }) {
   const cardRef = useRef<HTMLElement>(null);
 
   function handleMouseMove(event: MouseEvent<HTMLElement>) {
@@ -59,7 +58,7 @@ export function ProjectCard({ project }: { project: Project }) {
           </div>
         </div>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{project.description}</p>
-        <ProjectVisual title={project.title} />
+        {visual}
         {project.highlights.length > 0 && (
           <ul className="mt-3 flex flex-col gap-1">
             {project.highlights.map((highlight) => (

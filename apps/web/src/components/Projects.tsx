@@ -1,6 +1,7 @@
 import type { Project } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
 import { ProjectCard } from "@/components/ProjectCard";
+import { getProjectVisual } from "@/lib/projectVisuals";
 
 export function Projects({ projects }: { projects: Project[] }) {
   return (
@@ -14,7 +15,11 @@ export function Projects({ projects }: { projects: Project[] }) {
       ) : (
         <div className="mt-4 flex flex-col gap-6">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              visual={getProjectVisual(project.title)}
+            />
           ))}
         </div>
       )}
