@@ -28,12 +28,20 @@ export default async function Home() {
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+      >
+        Skip to main content
+      </a>
       <Nav />
-      <main className="flex flex-1 flex-col items-center font-sans">
+      <main id="main-content" className="flex flex-1 flex-col items-center font-sans">
         <Hero />
 
         <div className="flex w-full max-w-3xl flex-col gap-24 px-6 py-20 sm:px-16 sm:py-28">
-          <FitAnalyzer />
+          <ScrollReveal>
+            <FitAnalyzer />
+          </ScrollReveal>
 
           <ScrollReveal>
             <Projects projects={projects} />

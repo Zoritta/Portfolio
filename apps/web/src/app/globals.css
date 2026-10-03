@@ -6,6 +6,7 @@
   --background: #fdfbf9;
   --foreground: #201a16;
   --accent: #b8552f;
+  --accent-solid: #b8552f;
   --accent-bg: #f7e9e1;
   --glow-color: rgba(184, 85, 47, 0.08);
   color-scheme: light;
@@ -15,6 +16,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
+  --color-accent-solid: var(--accent-solid);
   --color-accent-bg: var(--accent-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -24,6 +26,8 @@
   --background: #171310;
   --foreground: #f3ece6;
   --accent: #d97a52;
+  /* Darker than --accent: white button text on --accent fails WCAG AA (3.06:1) in dark mode. */
+  --accent-solid: #b25930;
   --accent-bg: rgba(217, 122, 82, 0.12);
   --glow-color: rgba(217, 122, 82, 0.12);
   color-scheme: dark;

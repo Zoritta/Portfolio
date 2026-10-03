@@ -23,7 +23,7 @@ export function Experience({ experience }: { experience: ExperienceEntry[] }) {
                 <h3 className="font-medium text-black dark:text-zinc-50">
                   {entry.role} — {entry.company}
                 </h3>
-                <span className="text-sm text-zinc-500 dark:text-zinc-500">
+                <span className="text-sm text-zinc-500 dark:text-zinc-400">
                   {formatDate(entry.startDate)} – {formatDate(entry.endDate)}
                 </span>
               </div>

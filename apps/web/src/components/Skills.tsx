@@ -26,7 +26,7 @@ export function Skills({ skills }: { skills: Skill[] }) {
         <div className="mt-4 flex flex-col gap-4">
           {Array.from(skillGroups.entries()).map(([category, categorySkills]) => (
             <div key={category}>
-              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-500">{category}</h3>
+              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{category}</h3>
               <ul className="mt-2 flex flex-wrap gap-2">
                 {categorySkills.map((skill) => (
                   <li

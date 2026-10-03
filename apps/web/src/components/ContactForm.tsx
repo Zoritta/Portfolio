@@ -55,28 +55,46 @@ export function ContactForm() {
 
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Your name"
-            className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
-          />
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="Your email"
+          <div>
+            <label htmlFor="contact-name" className="sr-only">
+              Your name
+            </label>
+            <input
+              id="contact-name"
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Your name"
+              className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
+            />
+          </div>
+          <div>
+            <label htmlFor="contact-email" className="sr-only">
+              Your email
+            </label>
+            <input
+              id="contact-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Your email"
+              className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
+            />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="contact-message" className="sr-only">
+            Your message
+          </label>
+          <textarea
+            id="contact-message"
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            placeholder="Your message…"
+            rows={5}
             className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
           />
         </div>
-        <textarea
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          placeholder="Your message…"
-          rows={5}
-          className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
-        />
 
         {/* Honeypot: hidden off-screen via CSS rather than type="hidden" (bots specifically skip
             hidden inputs, but still fill in anything that looks like a normal visible field). */}
@@ -94,13 +112,13 @@ export function ContactForm() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs text-zinc-500 dark:text-zinc-500">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
             {trimmedMessageLength} / {MAX_MESSAGE_LENGTH} characters (min {MIN_MESSAGE_LENGTH})
           </span>
           <button
             type="submit"
             disabled={!isValid || status === "loading"}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg bg-accent-solid px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {status === "loading" ? "Sending…" : "Send Message"}
           </button>
@@ -108,13 +126,19 @@ export function ContactForm() {
       </form>
 
       {status === "error" && error && (
-        <p className="mt-4 animate-[fade-in_0.3s_ease-out] rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400">
+        <p
+          role="alert"
+          className="mt-4 animate-[fade-in_0.3s_ease-out] rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400"
+        >
           {error}
         </p>
       )}
 
       {status === "success" && (
-        <p className="mt-4 animate-[fade-in_0.4s_ease-out] rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-400">
+        <p
+          role="status"
+          className="mt-4 animate-[fade-in_0.4s_ease-out] rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-400"
+        >
           Thanks — your message has been sent. I&apos;ll get back to you soon.
         </p>
       )}

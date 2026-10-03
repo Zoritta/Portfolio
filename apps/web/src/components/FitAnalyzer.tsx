@@ -1,8 +1,19 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
+import { motion } from "framer-motion";
 import { analyzeJobFit, FitAnalysisError, type FitReport } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+
+const resultContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+};
+
+const resultItem = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+} as const;
 
 const MIN_LENGTH = 50;
 const MAX_LENGTH = 8000;
@@ -42,15 +53,25 @@ export function FitAnalyzer() {
   }
 
   return (
-    <section>
-      <h2 className="text-xl font-semibold text-black dark:text-zinc-50">Job Fit Analyzer</h2>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+    <section
+      id="fit-analyzer"
+      className="scroll-mt-24 rounded-2xl border border-accent/20 bg-accent-bg/50 p-6 dark:bg-accent-bg/20 sm:p-8"
+    >
+      <span className="text-xs font-medium uppercase tracking-wide text-accent">Try it</span>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-black dark:text-zinc-50 sm:text-3xl">
+        Job Fit Analyzer
+      </h2>
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
         Paste a job description and get a grounded fit report — generated from my actual project,
         skill, and experience data via retrieval-augmented generation, not a generic AI wrapper.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
+        <label htmlFor="job-description" className="sr-only">
+          Job description
+        </label>
         <textarea
+          id="job-description"
           value={jobDescription}
           onChange={(event) => setJobDescription(event.target.value)}
           placeholder="Paste a job description here…"
@@ -58,27 +79,36 @@ export function FitAnalyzer() {
           className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-black placeholder:text-zinc-400 focus:border-accent focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
         />
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs text-zinc-500 dark:text-zinc-500">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
             {length} / {MAX_LENGTH} characters (min {MIN_LENGTH})
           </span>
-          <button
+          <motion.button
             type="submit"
             disabled={!isValidLength || status === "loading"}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            whileHover={isValidLength && status !== "loading" ? { scale: 1.03 } : undefined}
+            whileTap={isValidLength && status !== "loading" ? { scale: 0.97 } : undefined}
+            className="rounded-lg bg-accent-solid px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {status === "loading" ? "Analyzing…" : "Analyze Fit"}
-          </button>
+          </motion.button>
         </div>
       </form>
 
       {status === "error" && error && (
-        <p className="mt-4 animate-[fade-in_0.3s_ease-out] rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400">
+        <p
+          role="alert"
+          className="mt-4 animate-[fade-in_0.3s_ease-out] rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400"
+        >
           {error}
         </p>
       )}
 
       {status === "loading" && (
-        <div className="mt-6 flex flex-col gap-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+        <div
+          role="status"
+          aria-label="Analyzing job description"
+          className="mt-6 flex flex-col gap-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800"
+        >
           <div>
             <Skeleton className="h-9 w-24" />
             <Skeleton className="mt-3 h-4 w-full" />
@@ -96,18 +126,25 @@ export function FitAnalyzer() {
       )}
 
       {status === "success" && report && (
-        <div className="mt-6 flex animate-[fade-in_0.4s_ease-out] flex-col gap-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
-          <div>
+        <motion.div
+          variants={resultContainer}
+          initial="hidden"
+          animate="show"
+          role="status"
+          aria-label={`Fit analysis complete: ${report.matchScore}% match`}
+          className="mt-6 flex flex-col gap-6 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950"
+        >
+          <motion.div variants={resultItem}>
             <span className={`text-3xl font-semibold ${scoreColor(report.matchScore)}`}>
               {report.matchScore}%
             </span>
-            <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-500">match</span>
+            <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-400">match</span>
             <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{report.summary}</p>
-          </div>
+          </motion.div>
 
           {report.strengths.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-500">Strengths</h3>
+            <motion.div variants={resultItem}>
+              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Strengths</h3>
               <ul className="mt-2 flex flex-col gap-1.5">
                 {report.strengths.map((strength, index) => (
                   <li key={index} className="flex gap-2 text-sm text-zinc-700 dark:text-zinc-300">
@@ -116,12 +153,12 @@ export function FitAnalyzer() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </motion.div>
           )}
 
           {report.gaps.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-500">Gaps</h3>
+            <motion.div variants={resultItem}>
+              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Gaps</h3>
               <ul className="mt-2 flex flex-col gap-1.5">
                 {report.gaps.map((gap, index) => (
                   <li key={index} className="flex gap-2 text-sm text-zinc-700 dark:text-zinc-300">
@@ -130,12 +167,12 @@ export function FitAnalyzer() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </motion.div>
           )}
 
           {report.suggestedInterviewQuestions.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-500">
+            <motion.div variants={resultItem}>
+              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 Suggested interview questions
               </h3>
               <ul className="mt-2 flex list-decimal flex-col gap-1.5 pl-4">
@@ -145,9 +182,9 @@ export function FitAnalyzer() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       )}
     </section>
   );

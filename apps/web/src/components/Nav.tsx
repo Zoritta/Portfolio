@@ -1,6 +1,7 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const LINKS = [
+  { href: "#fit-analyzer", label: "Fit Analyzer" },
   { href: "#projects", label: "Projects" },
   { href: "#experience", label: "Experience" },
   { href: "#skills", label: "Skills" },
