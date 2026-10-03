@@ -19,7 +19,19 @@ const FEATURED_POSTS: { embedSrc: string; caption: string; height: number }[] =
     },
     {
       embedSrc:
-        "https://www.linkedin.com/embed/feed/update/urn:li:share:7404226577586429952?collapsed=1",
+        "https://www.linkedin.com/embed/feed/update/urn:li:share:7386112902962917377?collapsed=1",
+      caption: "Zohreh Sadeghi on LinkedIn",
+      height: 1324,
+    },
+    {
+      embedSrc:
+        "https://www.linkedin.com/embed/feed/update/urn:li:share:7397316973061324801?collapsed=1",
+      caption: "Zohreh Sadeghi on LinkedIn",
+      height: 1324,
+    },
+    {
+      embedSrc:
+        "https://www.linkedin.com/embed/feed/update/urn:li:share:7354233997750583296?collapsed=1",
       caption: "Zohreh Sadeghi on LinkedIn",
       height: 1324,
     },

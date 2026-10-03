@@ -47,14 +47,14 @@ export function LinkedInPostsCarousel({ posts }: { posts: Post[] }) {
           <div
             key={post.embedSrc}
             data-carousel-item
-            className="w-full max-w-[504px] flex-none snap-start"
+            className="w-full max-w-[504px] flex-none snap-start rounded-2xl border border-accent/20 bg-accent-bg/50 p-3 dark:bg-accent-bg/20"
           >
             <iframe
               src={post.embedSrc}
               title={post.caption}
               height={post.height}
               width="100%"
-              className="rounded-lg border border-zinc-200 dark:border-zinc-800"
+              className="rounded-lg border border-zinc-200 [filter:saturate(0.4)_sepia(0.15)] dark:border-zinc-800 dark:[filter:saturate(0.4)_sepia(0.15)_brightness(0.85)]"
               allowFullScreen
             />
           </div>
