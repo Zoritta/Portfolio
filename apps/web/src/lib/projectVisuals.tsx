@@ -18,7 +18,10 @@ export function getProjectVisual(title: string): ReactNode | null {
   const screenshot = SCREENSHOT_PROJECTS[title];
   if (screenshot && existsSync(join(process.cwd(), "public", screenshot.src))) {
     return (
-      <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+      <div
+        key="project-screenshot"
+        className="mt-4 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800"
+      >
         <Image
           src={screenshot.src}
           alt={screenshot.alt}
@@ -32,7 +35,7 @@ export function getProjectVisual(title: string): ReactNode | null {
 
   if (DIAGRAM_PROJECTS.has(title)) {
     return (
-      <div className="mt-4">
+      <div key="architecture-flow" className="mt-4">
         <ArchitectureFlow />
       </div>
     );
