@@ -50,7 +50,13 @@ const projects = [
     title: 'AI-Integrated Creative Assistant',
     description:
       'A streaming AI agent chat feature built with the Vercel AI SDK, pairing server-side streamText with client-side useChat for token-level, real-time response rendering. Implemented five server-side tool definitions (board search, pin retrieval, colour-palette lookup, inspiration summaries) letting the model autonomously chain up to five tool-calling steps per response, integrated directly into a production-style app.',
-    techStack: ['Next.js', 'TypeScript', 'Vercel AI SDK', 'OpenAI API', 'React'],
+    techStack: [
+      'Next.js',
+      'TypeScript',
+      'Vercel AI SDK',
+      'OpenAI API',
+      'React',
+    ],
     repoUrl: null,
     liveUrl: null,
     highlights: [
@@ -62,7 +68,7 @@ const projects = [
   {
     title: 'AI-Powered Developer Portfolio (this site)',
     description:
-      'A fullstack portfolio built as a real production system rather than a template: a Next.js/TypeScript frontend on Vercel, a standalone NestJS API on AWS ECS Fargate, and a Postgres database managed with Prisma. The flagship feature is a Job Fit Analyzer — visitors paste a job description and get a grounded fit report generated via retrieval-augmented generation (RAG) over the site\'s own project/skill/experience data, with citations, a match score, and gap analysis, rather than a generic chatbot wrapper. Includes a self-built MCP server exposing project/skill/experience data as callable tools, and is designed security-first given it accepts untrusted text into an LLM pipeline: input validation, rate limiting, and prompt-injection hardening protect the endpoint.',
+      "A fullstack portfolio built as a real production system rather than a template: a Next.js/TypeScript frontend on Vercel, a standalone NestJS API on AWS ECS Fargate, and a Postgres database managed with Prisma. The flagship feature is a Job Fit Analyzer — visitors paste a job description and get a grounded fit report generated via retrieval-augmented generation (RAG) over the site's own project/skill/experience data, with citations, a match score, and gap analysis, rather than a generic chatbot wrapper. Includes a self-built MCP server exposing project/skill/experience data as callable tools, and is designed security-first given it accepts untrusted text into an LLM pipeline: input validation, rate limiting, and prompt-injection hardening protect the endpoint.",
     techStack: [
       'Next.js',
       'TypeScript',
@@ -122,12 +128,36 @@ const skills: { name: string; category: string; proficiency: number }[] = [
   // AI / LLM
   { name: 'Vercel AI SDK', category: 'AI & LLM Engineering', proficiency: 4 },
   { name: 'OpenAI API', category: 'AI & LLM Engineering', proficiency: 4 },
-  { name: 'Prompt Engineering', category: 'AI & LLM Engineering', proficiency: 3 },
-  { name: 'Agentic Tool-Calling', category: 'AI & LLM Engineering', proficiency: 4 },
-  { name: 'Streaming AI UIs', category: 'AI & LLM Engineering', proficiency: 4 },
-  { name: 'RAG (Retrieval-Augmented Generation)', category: 'AI & LLM Engineering', proficiency: 2 },
-  { name: 'Model Context Protocol (MCP)', category: 'AI & LLM Engineering', proficiency: 1 },
-  { name: 'Prompt-Injection Hardening', category: 'AI & LLM Engineering', proficiency: 1 },
+  {
+    name: 'Prompt Engineering',
+    category: 'AI & LLM Engineering',
+    proficiency: 3,
+  },
+  {
+    name: 'Agentic Tool-Calling',
+    category: 'AI & LLM Engineering',
+    proficiency: 4,
+  },
+  {
+    name: 'Streaming AI UIs',
+    category: 'AI & LLM Engineering',
+    proficiency: 4,
+  },
+  {
+    name: 'RAG (Retrieval-Augmented Generation)',
+    category: 'AI & LLM Engineering',
+    proficiency: 2,
+  },
+  {
+    name: 'Model Context Protocol (MCP)',
+    category: 'AI & LLM Engineering',
+    proficiency: 1,
+  },
+  {
+    name: 'Prompt-Injection Hardening',
+    category: 'AI & LLM Engineering',
+    proficiency: 1,
+  },
 
   // Cloud & DevOps
   { name: 'AWS', category: 'Cloud & DevOps', proficiency: 3 },
@@ -139,7 +169,11 @@ const skills: { name: string; category: string; proficiency: number }[] = [
   { name: 'AWS ECS Fargate', category: 'Cloud & DevOps', proficiency: 1 },
   { name: 'AWS RDS', category: 'Cloud & DevOps', proficiency: 1 },
   { name: 'AWS Secrets Manager', category: 'Cloud & DevOps', proficiency: 1 },
-  { name: 'GitHub Actions / CI-CD', category: 'Cloud & DevOps', proficiency: 3 },
+  {
+    name: 'GitHub Actions / CI-CD',
+    category: 'Cloud & DevOps',
+    proficiency: 3,
+  },
 
   // Security
   { name: 'Input Validation (Zod)', category: 'Security', proficiency: 2 },
@@ -167,7 +201,9 @@ const skills: { name: string; category: string; proficiency: number }[] = [
 async function main() {
   for (const experience of experiences) {
     await prisma.experience.upsert({
-      where: { company_role: { company: experience.company, role: experience.role } },
+      where: {
+        company_role: { company: experience.company, role: experience.role },
+      },
       update: experience,
       create: experience,
     });

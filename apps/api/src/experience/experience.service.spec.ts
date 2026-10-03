@@ -43,7 +43,11 @@ describe('ExperienceService', () => {
       const workNewer = { id: 'work-1', company: 'Insighta Inc.' };
       const workOlder = { id: 'work-2', company: 'Polestar' };
       // Prisma already returned these startDate-desc, with education interleaved.
-      prismaMock.experience.findMany.mockResolvedValue([workNewer, education, workOlder]);
+      prismaMock.experience.findMany.mockResolvedValue([
+        workNewer,
+        education,
+        workOlder,
+      ]);
 
       const result = await service.findAll();
 
