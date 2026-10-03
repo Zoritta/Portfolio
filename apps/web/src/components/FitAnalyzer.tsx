@@ -63,8 +63,12 @@ export function FitAnalyzer() {
         Job Fit Analyzer
       </h2>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Paste a job description and get a grounded fit report — generated from my actual project,
-        skill, and experience data via retrieval-augmented generation, not a generic AI wrapper.
+        Paste a job description and see how I actually match it — a score, real strengths and
+        gaps pulled from my background, and interview questions you could ask me.
+      </p>
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+        It&apos;s grounded in retrieval-augmented generation over my real project, skill, and
+        experience data, not a generic AI wrapper.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
