@@ -2,6 +2,8 @@ import type { Experience as ExperienceEntry } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
 import { SectionEyebrow } from "@/components/SectionEyebrow";
 
+const EDUCATION_PROVIDER = "Jensen Yrkeshögskola";
+
 function formatDate(value: string | null) {
   if (!value) return "Present";
   return new Date(value).toLocaleDateString("en-GB", { year: "numeric", month: "short" });
@@ -24,9 +26,11 @@ export function Experience({ experience }: { experience: ExperienceEntry[] }) {
                 <h3 className="font-medium text-black dark:text-zinc-50">
                   {entry.role} — {entry.company}
                 </h3>
-                <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {formatDate(entry.startDate)} – {formatDate(entry.endDate)}
-                </span>
+                {entry.company !== EDUCATION_PROVIDER && (
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                    {formatDate(entry.startDate)} – {formatDate(entry.endDate)}
+                  </span>
+                )}
               </div>
               <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
                 {entry.description}
