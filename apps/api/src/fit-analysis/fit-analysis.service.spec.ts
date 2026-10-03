@@ -107,9 +107,7 @@ describe('FitAnalysisService', () => {
   });
 
   it('maps an unexpected error to InternalServerErrorException', async () => {
-    generateTextMock.mockRejectedValue(
-      new Error('something unrelated broke'),
-    );
+    generateTextMock.mockRejectedValue(new Error('something unrelated broke'));
 
     await expect(service.analyze('a'.repeat(60))).rejects.toThrow(
       InternalServerErrorException,

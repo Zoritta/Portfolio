@@ -16,9 +16,7 @@ export class WebhooksService {
       );
     }
 
-    const expected = createHmac('sha256', secret)
-      .update(rawBody)
-      .digest('hex');
+    const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
     const expectedBuffer = Buffer.from(expected, 'hex');
     const providedBuffer = Buffer.from(signature, 'hex');
 
@@ -73,18 +71,14 @@ export class WebhooksService {
   private formatMessage(payload: unknown): string {
     if (typeof payload === 'object' && payload !== null) {
       const data = (payload as Record<string, unknown>).data as
-        | Record<string, unknown>
-        | undefined;
+        Record<string, unknown> | undefined;
       const event = data?.event as Record<string, unknown> | undefined;
       const issue = data?.issue as Record<string, unknown> | undefined;
 
       const title = (event?.title ?? issue?.title) as string | undefined;
-      const culprit = (event?.culprit ?? issue?.culprit) as
-        | string
-        | undefined;
+      const culprit = (event?.culprit ?? issue?.culprit) as string | undefined;
       const url = (issue?.web_url ?? event?.web_url ?? issue?.url) as
-        | string
-        | undefined;
+        string | undefined;
 
       if (title) {
         const lines = [`*Sentry alert:* ${title}`];
