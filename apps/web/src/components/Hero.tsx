@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useRotatingText } from "@/hooks/useRotatingText";
+import { AmbientBackground } from "@/components/AmbientBackground";
 
 const ROLES = ["Fullstack Developer", "Cloud-Native Engineer", "AI/RAG Developer"];
 
@@ -20,12 +21,13 @@ export function Hero() {
   const role = useRotatingText(ROLES);
 
   return (
-    <div className="w-full px-6 py-20 sm:px-16 sm:py-28">
+    <div className="relative w-full overflow-hidden px-6 py-28 sm:px-16 sm:py-40">
+      <AmbientBackground />
       <motion.div
         variants={container}
         initial="hidden"
         animate="show"
-        className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 text-center"
+        className="relative mx-auto flex w-full max-w-4xl flex-col items-center gap-7 text-center"
       >
         <motion.span
           variants={item}
@@ -38,18 +40,18 @@ export function Hero() {
           <Image
             src="/profile.jpg"
             alt="Zohreh Sadeghi"
-            width={128}
-            height={128}
+            width={112}
+            height={112}
             priority
-            className="h-28 w-28 rounded-full object-cover ring-4 ring-accent-bg sm:h-32 sm:w-32"
+            className="h-24 w-24 rounded-full object-cover ring-4 ring-accent-bg sm:h-28 sm:w-28"
           />
         </motion.div>
 
         <motion.div variants={item}>
-          <h1 className="text-4xl font-semibold tracking-tight text-black dark:text-zinc-50 sm:text-5xl">
+          <h1 className="text-6xl font-bold tracking-tighter text-black dark:text-zinc-50 sm:text-7xl md:text-8xl">
             Zohreh Sadeghi
           </h1>
-          <p className="mt-2 text-lg text-zinc-600 dark:text-zinc-400">
+          <p className="mt-4 text-xl text-zinc-600 dark:text-zinc-400 sm:text-2xl">
             {role} — Malmö, Sweden
           </p>
         </motion.div>

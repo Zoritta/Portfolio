@@ -4,6 +4,7 @@ import { useState, type SubmitEvent } from "react";
 import { motion } from "framer-motion";
 import { analyzeJobFit, FitAnalysisError, type FitReport } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import { SectionEyebrow } from "@/components/SectionEyebrow";
 
 const resultContainer = {
   hidden: {},
@@ -57,8 +58,8 @@ export function FitAnalyzer() {
       id="fit-analyzer"
       className="scroll-mt-24 rounded-2xl border border-accent/20 bg-accent-bg/50 p-6 dark:bg-accent-bg/20 sm:p-8"
     >
-      <span className="text-xs font-medium uppercase tracking-wide text-accent">Try it</span>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-black dark:text-zinc-50 sm:text-3xl">
+      <SectionEyebrow number="00" label="Try it" />
+      <h2 className="mt-2 text-4xl font-bold tracking-tight text-black dark:text-zinc-50 sm:text-5xl">
         Job Fit Analyzer
       </h2>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">

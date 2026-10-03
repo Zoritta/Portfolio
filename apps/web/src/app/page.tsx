@@ -38,7 +38,7 @@ export default async function Home() {
       <main id="main-content" className="flex flex-1 flex-col items-center font-sans">
         <Hero />
 
-        <div className="flex w-full max-w-3xl flex-col gap-24 px-6 py-20 sm:px-16 sm:py-28">
+        <div className="flex w-full max-w-4xl flex-col gap-32 px-6 py-24 sm:px-16 sm:py-32">
           <ScrollReveal>
             <FitAnalyzer />
           </ScrollReveal>

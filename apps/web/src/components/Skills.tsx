@@ -1,5 +1,6 @@
 import type { Skill } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
+import { SectionEyebrow } from "@/components/SectionEyebrow";
 
 /**
  * Display-only regrouping: the DB's 11 categories (used verbatim in the FitAnalyzer's
@@ -27,8 +28,8 @@ export function Skills({ skills }: { skills: Skill[] }) {
 
   return (
     <section id="skills" className="scroll-mt-24">
-      <span className="text-xs font-medium uppercase tracking-wide text-accent">Toolkit</span>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-black dark:text-zinc-50 sm:text-3xl">
+      <SectionEyebrow number="03" label="Toolkit" />
+      <h2 className="mt-2 text-4xl font-bold tracking-tight text-black dark:text-zinc-50 sm:text-5xl">
         Skills
       </h2>
       {skills.length === 0 ? (

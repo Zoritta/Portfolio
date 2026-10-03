@@ -11,7 +11,7 @@ const LINKS = [
 export function Nav() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-zinc-200/80 bg-[var(--background)]/80 backdrop-blur dark:border-zinc-800/80">
-      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-6 py-4 sm:px-16">
+      <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4 px-6 py-4 sm:px-16">
         <a href="#" className="text-sm font-medium text-black dark:text-zinc-50">
           Zohreh Sadeghi
         </a>
