@@ -2,6 +2,7 @@ import { getExperience, getProjects, getSkills } from "@/lib/api";
 import { FitAnalyzer } from "@/components/FitAnalyzer";
 import { Hero } from "@/components/Hero";
 import { Nav } from "@/components/Nav";
+import { SkillsMarquee } from "@/components/SkillsMarquee";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { Projects } from "@/components/Projects";
 import { Experience } from "@/components/Experience";
@@ -37,6 +38,7 @@ export default async function Home() {
       <Nav />
       <main id="main-content" className="flex flex-1 flex-col items-center font-sans">
         <Hero />
+        <SkillsMarquee />
 
         <div className="flex w-full max-w-4xl flex-col gap-32 px-6 py-24 sm:px-16 sm:py-32">
           <ScrollReveal>
