@@ -9,6 +9,7 @@ import { Experience } from "@/components/Experience";
 import { Skills } from "@/components/Skills";
 import { LinkedInPosts } from "@/components/LinkedInPosts";
 import { ContactForm } from "@/components/ContactForm";
+import { Footer } from "@/components/Footer";
 
 export default async function Home() {
   let projects, skills, experience;
@@ -63,6 +64,7 @@ export default async function Home() {
           </ScrollReveal>
         </div>
       </main>
+      <Footer />
     </>
   );
 }
