@@ -7,6 +7,7 @@ import { ScrollReveal } from "@/components/ScrollReveal";
 import { Projects } from "@/components/Projects";
 import { Experience } from "@/components/Experience";
 import { Skills } from "@/components/Skills";
+import { LinkedInPosts } from "@/components/LinkedInPosts";
 import { ContactForm } from "@/components/ContactForm";
 
 export default async function Home() {
@@ -53,6 +54,9 @@ export default async function Home() {
           </ScrollReveal>
           <ScrollReveal>
             <Skills skills={skills} />
+          </ScrollReveal>
+          <ScrollReveal>
+            <LinkedInPosts />
           </ScrollReveal>
           <ScrollReveal>
             <ContactForm />

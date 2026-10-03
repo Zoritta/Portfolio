@@ -46,7 +46,7 @@ export function ContactForm() {
 
   return (
     <section id="contact" className="scroll-mt-24">
-      <SectionEyebrow number="04" label="Get in touch" />
+      <SectionEyebrow number="05" label="Get in touch" />
       <h2 className="mt-2 text-4xl font-bold tracking-tight text-black dark:text-zinc-50 sm:text-5xl">
         Contact
       </h2>
