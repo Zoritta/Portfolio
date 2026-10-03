@@ -33,11 +33,6 @@ export function Hero() {
           </p>
         </div>
 
-        <p className="max-w-xl text-balance text-zinc-600 dark:text-zinc-400">
-          I build fast, reliable web apps end-to-end — from React frontends to cloud-native,
-          AI-assisted APIs.
-        </p>
-
         <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
           <a
             href="#projects"
