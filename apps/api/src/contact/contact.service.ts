@@ -54,14 +54,14 @@ export class ContactService {
     email: string,
     message: string,
   ): Promise<void> {
-    const toAddress = this.config.get<string>('CONTACT_TO_EMAIL');
-    if (!toAddress) {
-      throw new Error(
-        'CONTACT_TO_EMAIL is not set. Add it to apps/api/.env before sending contact messages.',
-      );
-    }
-
     try {
+      const toAddress = this.config.get<string>('CONTACT_TO_EMAIL');
+      if (!toAddress) {
+        throw new Error(
+          'CONTACT_TO_EMAIL is not set. Add it to apps/api/.env before sending contact messages.',
+        );
+      }
+
       const { error } = await this.getClient().emails.send({
         from: 'Portfolio Contact Form <onboarding@resend.dev>',
         to: toAddress,

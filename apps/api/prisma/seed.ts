@@ -68,7 +68,7 @@ const projects = [
   {
     title: 'AI-Powered Developer Portfolio (this site)',
     description:
-      "A fullstack portfolio built as a real production system rather than a template: a Next.js/TypeScript frontend on Vercel, a standalone NestJS API on AWS ECS Fargate, and a Postgres database managed with Prisma. The flagship feature is a Job Fit Analyzer — visitors paste a job description and get a grounded fit report generated via retrieval-augmented generation (RAG) over the site's own project/skill/experience data, with citations, a match score, and gap analysis, rather than a generic chatbot wrapper. Includes a self-built MCP server exposing project/skill/experience data as callable tools, and is designed security-first given it accepts untrusted text into an LLM pipeline: input validation, rate limiting, and prompt-injection hardening protect the endpoint.",
+      "A fullstack portfolio built as a real production system rather than a template: a Next.js/TypeScript frontend on Vercel, a standalone Dockerized NestJS API with a Terraform-managed AWS ECS Fargate deployment (running on Render day-to-day for cost efficiency — the AWS infrastructure is a `terraform apply` away), and a Postgres database managed with Prisma. The flagship feature is a Job Fit Analyzer — visitors paste a job description and get a grounded fit report generated via retrieval-augmented generation (RAG) over the site's own project/skill/experience data, with citations, a match score, and gap analysis, rather than a generic chatbot wrapper. Includes a self-built MCP server exposing project/skill/experience data as callable tools, and is designed security-first given it accepts untrusted text into an LLM pipeline: input validation, rate limiting, and prompt-injection hardening protect the endpoint.",
     techStack: [
       'Next.js',
       'TypeScript',
@@ -79,6 +79,7 @@ const projects = [
       'Docker',
       'AWS (ECS Fargate, RDS, Secrets Manager)',
       'Terraform',
+      'Render',
       'GitHub Actions',
       'Vercel AI SDK',
       'OpenAI API',
@@ -89,7 +90,7 @@ const projects = [
     highlights: [
       'Job Fit Analyzer: RAG-grounded fit report generation, not a generic chatbot',
       'Self-built MCP server exposing personal project data as agent-callable tools',
-      'Dockerized NestJS API deployed to AWS ECS Fargate via Terraform-managed infra',
+      'Dockerized NestJS API with Terraform-managed AWS ECS Fargate infra, running on Render day-to-day for cost efficiency',
       'Security-first design: zod validation, rate limiting, and prompt-injection hardening around the LLM endpoint',
     ],
   },
